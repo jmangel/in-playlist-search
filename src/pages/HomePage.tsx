@@ -1,8 +1,6 @@
 import {
   AuthorizationCodeWithPKCEStrategy,
   Devices,
-  Page,
-  SearchResults,
   SimplifiedPlaylist,
   SpotifyApi,
   UserProfile,
@@ -29,7 +27,6 @@ type LoaderResponse = {
   profile?: UserProfile;
   playlists?: SimplifiedPlaylist[];
   devices?: Devices;
-  searchResults?: SearchResults<['artist']>;
 };
 
 export const getSdk = async () => {
@@ -72,13 +69,11 @@ export const loader: LoaderFunction = async ({
 }): Promise<LoaderResponse> => {
   const sdk = await getSdk();
 
-  let profile, playlists, devices, searchResults;
+  let profile, playlists, devices;
 
   if (sdk) {
     const profilePromise = sdk.currentUser.profile();
     const devicesPromise = sdk.player.getAvailableDevices();
-    // @ts-ignore
-    const searchResultsPromise = sdk.search('The Beatles', ['artist']);
 
     const fetchPlaylists = async () => {
       let fetchedPlaylists: SimplifiedPlaylist[] = [];
@@ -100,11 +95,10 @@ export const loader: LoaderFunction = async ({
 
     const playlistsPromise = fetchPlaylists();
 
-    [profile, playlists, devices, searchResults] = await Promise.all([
+    [profile, playlists, devices] = await Promise.all([
       profilePromise,
       playlistsPromise,
       devicesPromise,
-      searchResultsPromise,
     ]);
   }
 
@@ -113,7 +107,6 @@ export const loader: LoaderFunction = async ({
     profile,
     playlists,
     devices,
-    searchResults,
   };
 };
 
@@ -124,7 +117,7 @@ function HomePage() {
     <>
       <ProfileInfo />
       <DevicesInput />
-      <SpotifySearch />
+      <PlaylistsMetadata />
     </>
   ) : (
     <></>
@@ -193,28 +186,34 @@ const DevicesInput = () => {
   );
 };
 
-const SpotifySearch = () => {
-  const { searchResults } = useLoaderData() as LoaderResponse;
+const truncateString = (str?: string, num?: number) => {
+  if (!str) return '';
+  if (!num) return str;
+  return str.length > num ? str.slice(0, num) + '...' : str;
+};
 
-  const tableRows = searchResults?.artists?.items.map((artist) => {
+const PlaylistsMetadata = () => {
+  const { playlists } = useLoaderData() as LoaderResponse;
+
+  const tableRows = playlists?.map(({ id, name, description, tracks }) => {
     return (
-      <tr key={artist.id}>
-        <td>{artist.name}</td>
-        <td>{artist.popularity}</td>
-        <td>{artist.followers.total}</td>
+      <tr key={id}>
+        <td>{name}</td>
+        <td>{truncateString(description, 50)}</td>
+        <td>{tracks?.total}</td>
       </tr>
     );
   });
 
   return (
     <>
-      <h1>Spotify Search for The Beatles</h1>
+      <h1>Your Playlists</h1>
       <table>
         <thead>
           <tr>
             <th>Name</th>
-            <th>Popularity</th>
-            <th>Followers</th>
+            <th>Description</th>
+            <th>Total Tracks</th>
           </tr>
         </thead>
         <tbody>{tableRows}</tbody>
