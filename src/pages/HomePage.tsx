@@ -75,25 +75,28 @@ export const loader: LoaderFunction = async ({
     const profilePromise = sdk.currentUser.profile();
     const devicesPromise = sdk.player.getAvailableDevices();
 
-    const fetchPlaylists = async () => {
-      let fetchedPlaylists: SimplifiedPlaylist[] = [];
-      let offset, nextUrl;
+    const playlistsPromise = sdk.currentUser.playlists
+      .playlists()
+      .then(async (playlistsResponse) => {
+        const { total, limit } = playlistsResponse;
+        let { items } = playlistsResponse;
 
-      do {
-        const playlistsResponse: Page<SimplifiedPlaylist> =
-          await sdk.currentUser.playlists.playlists(undefined, offset);
+        let offset = limit;
 
-        const { items, next, limit } = playlistsResponse;
+        let promises = [];
 
-        fetchedPlaylists = fetchedPlaylists.concat(items);
-        nextUrl = next;
-        offset = playlistsResponse.offset + limit;
-      } while (nextUrl);
+        while (offset < total) {
+          promises.push(sdk.currentUser.playlists.playlists(undefined, offset));
 
-      return fetchedPlaylists;
-    };
+          offset += limit;
+        }
 
-    const playlistsPromise = fetchPlaylists();
+        const responses = await Promise.all(promises);
+
+        items = responses.reduce((acc, { items }) => acc.concat(items), items);
+
+        return items;
+      });
 
     [profile, playlists, devices] = await Promise.all([
       profilePromise,
