@@ -8,6 +8,7 @@ import {
 import { useEffect, useState } from 'react';
 import { Form, Table } from 'react-bootstrap';
 import { LoaderFunction, useLoaderData } from 'react-router-dom';
+import Bottleneck from 'bottleneck';
 
 const clientId = process.env.REACT_APP_CLIENT_ID || '';
 const redirectUrl = `${process.env.REACT_APP_HOST_URI}/callback`;
@@ -67,6 +68,14 @@ export const getSdk = async () => {
   return sdk;
 };
 
+const requestQueue = new Bottleneck({
+  reservoir: 50,
+  reservoirRefreshAmount: 50,
+  reservoirRefreshInterval: 30 * 1000,
+  maxConcurrent: 50,
+  minTime: 50,
+});
+
 export const loader: LoaderFunction = async ({
   request,
 }): Promise<LoaderResponse> => {
@@ -75,27 +84,33 @@ export const loader: LoaderFunction = async ({
   let profile, playlists, devices;
 
   if (sdk) {
-    const profilePromise = sdk.currentUser.profile();
-    const devicesPromise = sdk.player.getAvailableDevices();
+    const profilePromise = requestQueue.schedule(() =>
+      sdk.currentUser.profile()
+    );
+    const devicesPromise = requestQueue.schedule(() =>
+      sdk.player.getAvailableDevices()
+    );
 
-    const getPlaylistsPage = async (offset = 0) => {
-      return sdk.currentUser.playlists
-        .playlists(undefined, offset)
-        .then((playlistMetadatas) => {
-          // playlistMetadatas.items.map(async ({ id }) => {
-          //   const playlist = await sdk.playlists.getPlaylist(
-          //     id,
-          //     undefined,
-          //     playlistFields
-          //   );
-          //   console.log(playlist);
-          // });
+    const scheduleGettingPlaylistsPage = async (offset = 0) => {
+      return requestQueue.schedule(() =>
+        sdk.currentUser.playlists
+          .playlists(undefined, offset)
+          .then((playlistMetadatas) => {
+            // playlistMetadatas.items.map(async ({ id }) => {
+            //   const playlist = await sdk.playlists.getPlaylist(
+            //     id,
+            //     undefined,
+            //     playlistFields
+            //   );
+            //   console.log(playlist);
+            // });
 
-          return playlistMetadatas;
-        });
+            return playlistMetadatas;
+          })
+      );
     };
 
-    const playlistsPromise = getPlaylistsPage().then(
+    const playlistsPromise = scheduleGettingPlaylistsPage().then(
       async (playlistsResponse) => {
         const { total, limit } = playlistsResponse;
         let { items } = playlistsResponse;
@@ -105,7 +120,7 @@ export const loader: LoaderFunction = async ({
         let promises = [];
 
         while (offset < total) {
-          promises.push(getPlaylistsPage(offset));
+          promises.push(scheduleGettingPlaylistsPage(offset));
 
           offset += limit;
         }
