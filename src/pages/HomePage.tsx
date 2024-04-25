@@ -1,7 +1,9 @@
 import {
   AuthorizationCodeWithPKCEStrategy,
   Devices,
+  Page,
   SearchResults,
+  SimplifiedPlaylist,
   SpotifyApi,
   UserProfile,
 } from '@spotify/web-api-ts-sdk';
@@ -25,6 +27,7 @@ const scopes = [
 type LoaderResponse = {
   sdk?: SpotifyApi;
   profile?: UserProfile;
+  playlists?: Page<SimplifiedPlaylist>;
   devices?: Devices;
   searchResults?: SearchResults<['artist']>;
 };
@@ -69,16 +72,18 @@ export const loader: LoaderFunction = async ({
 }): Promise<LoaderResponse> => {
   const sdk = await getSdk();
 
-  let profile, devices, searchResults;
+  let profile, playlists, devices, searchResults;
 
   if (sdk) {
     const profilePromise = sdk.currentUser.profile();
+    const playlistsPromise = sdk.currentUser.playlists.playlists();
     const devicesPromise = sdk.player.getAvailableDevices();
     // @ts-ignore
     const searchResultsPromise = sdk.search('The Beatles', ['artist']);
 
-    [profile, devices, searchResults] = await Promise.all([
+    [profile, playlists, devices, searchResults] = await Promise.all([
       profilePromise,
+      playlistsPromise,
       devicesPromise,
       searchResultsPromise,
     ]);
@@ -87,6 +92,7 @@ export const loader: LoaderFunction = async ({
   return {
     sdk,
     profile,
+    playlists,
     devices,
     searchResults,
   };
