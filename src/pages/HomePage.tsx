@@ -72,10 +72,16 @@ export const loader: LoaderFunction = async ({
   let profile, devices, searchResults;
 
   if (sdk) {
-    profile = await sdk.currentUser.profile();
-    devices = await sdk.player.getAvailableDevices();
+    const profilePromise = sdk.currentUser.profile();
+    const devicesPromise = sdk.player.getAvailableDevices();
     // @ts-ignore
-    searchResults = await sdk.search('The Beatles', ['artist']);
+    const searchResultsPromise = sdk.search('The Beatles', ['artist']);
+
+    [profile, devices, searchResults] = await Promise.all([
+      profilePromise,
+      devicesPromise,
+      searchResultsPromise,
+    ]);
   }
 
   return {
