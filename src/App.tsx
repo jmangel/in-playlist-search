@@ -16,7 +16,8 @@ const App = () => {
       element: <Root />,
       errorElement: <ErrorPage />,
       children: [
-        ...['/', '/callback'].map((path) => ({
+        ...['/', '/callback'].map((path, index) => ({
+          index: index === 0,
           path: path,
           element: <HomePage />,
           loader: homePageLoader,
