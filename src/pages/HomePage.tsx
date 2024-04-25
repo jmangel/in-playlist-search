@@ -75,9 +75,12 @@ export const loader: LoaderFunction = async ({
     const profilePromise = sdk.currentUser.profile();
     const devicesPromise = sdk.player.getAvailableDevices();
 
-    const playlistsPromise = sdk.currentUser.playlists
-      .playlists()
-      .then(async (playlistsResponse) => {
+    const getPlaylistsPage = async (offset = 0) => {
+      return sdk.currentUser.playlists.playlists(undefined, offset);
+    };
+
+    const playlistsPromise = getPlaylistsPage().then(
+      async (playlistsResponse) => {
         const { total, limit } = playlistsResponse;
         let { items } = playlistsResponse;
 
@@ -86,7 +89,7 @@ export const loader: LoaderFunction = async ({
         let promises = [];
 
         while (offset < total) {
-          promises.push(sdk.currentUser.playlists.playlists(undefined, offset));
+          promises.push(getPlaylistsPage(offset));
 
           offset += limit;
         }
@@ -96,7 +99,8 @@ export const loader: LoaderFunction = async ({
         items = responses.reduce((acc, { items }) => acc.concat(items), items);
 
         return items;
-      });
+      }
+    );
 
     // TODO: load playlist tracks in parallel
     // TODO: search field
