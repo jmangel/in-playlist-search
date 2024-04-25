@@ -16,6 +16,10 @@ const App = () => {
           index: true,
           element: <HomePage />,
         },
+        {
+          path: '/callback',
+          element: <HomePage />,
+        },
       ],
     },
   ];
