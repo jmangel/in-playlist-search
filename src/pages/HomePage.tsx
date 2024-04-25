@@ -6,7 +6,7 @@ import {
   UserProfile,
 } from '@spotify/web-api-ts-sdk';
 import { useEffect, useState } from 'react';
-import { Form } from 'react-bootstrap';
+import { Form, Table } from 'react-bootstrap';
 import { LoaderFunction, useLoaderData } from 'react-router-dom';
 
 const clientId = process.env.REACT_APP_CLIENT_ID || '';
@@ -211,7 +211,7 @@ const PlaylistsMetadata = () => {
   return (
     <>
       <h1>Your Playlists</h1>
-      <table>
+      <Table striped bordered hover>
         <thead>
           <tr>
             <th>Name</th>
@@ -220,7 +220,7 @@ const PlaylistsMetadata = () => {
           </tr>
         </thead>
         <tbody>{tableRows}</tbody>
-      </table>
+      </Table>
     </>
   );
 };
