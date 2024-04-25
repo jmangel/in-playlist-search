@@ -98,6 +98,19 @@ export const loader: LoaderFunction = async ({
         return items;
       });
 
+    // TODO: load playlist tracks in parallel
+    // TODO: search field
+    // TODO: play button
+    // TODO: use bottleneck library to avoid 429s
+    // TODO: handle 429s (re-queue)
+    // TODO: handle 401s (refresh token)
+    // TODO: restore/save copy of playlist (button)
+    // TODO: allow refreshing devices (button)
+    // TODO: cache playlists
+    // TODO: get cached playlists
+    // TODO: use refresh token?
+    // TODO: get track features (uniq set across all playlist tracks)
+
     [profile, playlists, devices] = await Promise.all([
       profilePromise,
       playlistsPromise,
