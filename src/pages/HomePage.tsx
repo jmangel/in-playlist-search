@@ -68,12 +68,21 @@ export const getSdk = async () => {
   return sdk;
 };
 
+const SPOTIFY_RATE_LIMIT_WINDOW_SECONDS = 30;
+const SPOTIFY_APPROXIMATE_REQUESTS_PER_WINDOW = 120; // internet says 90
 const requestQueue = new Bottleneck({
-  reservoir: 50,
-  reservoirRefreshAmount: 50,
-  reservoirRefreshInterval: 30 * 1000,
-  maxConcurrent: 50,
+  reservoir: SPOTIFY_APPROXIMATE_REQUESTS_PER_WINDOW,
+  reservoirRefreshAmount: SPOTIFY_APPROXIMATE_REQUESTS_PER_WINDOW,
+  reservoirRefreshInterval: SPOTIFY_RATE_LIMIT_WINDOW_SECONDS * 1000,
+  maxConcurrent: SPOTIFY_APPROXIMATE_REQUESTS_PER_WINDOW,
   minTime: 50,
+  trackDoneStatus: true,
+});
+
+requestQueue.on('failed', async (error, info) => {
+  if (error.message.includes('rate limit')) {
+    return SPOTIFY_RATE_LIMIT_WINDOW_SECONDS * 1000;
+  }
 });
 
 export const loader: LoaderFunction = async ({
@@ -95,25 +104,28 @@ export const loader: LoaderFunction = async ({
       return requestQueue.schedule(() =>
         sdk.currentUser.playlists
           .playlists(undefined, offset)
-          .then((playlistMetadatas) => {
-            // playlistMetadatas.items.map(async ({ id }) => {
-            //   const playlist = await sdk.playlists.getPlaylist(
-            //     id,
-            //     undefined,
-            //     playlistFields
-            //   );
-            //   console.log(playlist);
-            // });
+          .then(async (playlistMetadataPage) => {
+            const playlistPromises = playlistMetadataPage.items.map(
+              async ({ id }) =>
+                requestQueue.schedule(() =>
+                  sdk.playlists.getPlaylist(id, undefined, playlistFields)
+                )
+            );
 
-            return playlistMetadatas;
+            const playlistsDetails = await Promise.all(playlistPromises);
+
+            return {
+              playlistMetadataPage,
+              playlistsDetails,
+            };
           })
       );
     };
 
     const playlistsPromise = scheduleGettingPlaylistsPage().then(
-      async (playlistsResponse) => {
-        const { total, limit } = playlistsResponse;
-        let { items } = playlistsResponse;
+      async ({ playlistMetadataPage }) => {
+        const { total, limit } = playlistMetadataPage;
+        let { items } = playlistMetadataPage;
 
         let offset = limit;
 
@@ -127,13 +139,16 @@ export const loader: LoaderFunction = async ({
 
         const responses = await Promise.all(promises);
 
-        items = responses.reduce((acc, { items }) => acc.concat(items), items);
+        items = responses.reduce(
+          (acc, { playlistMetadataPage: { items } }) => acc.concat(items),
+          items
+        );
 
         return items;
       }
     );
 
-    // TODO: load playlist tracks in parallel
+    // TODO: handle only a finite number of requests in the loader; handle the rest in the component with visible progress
     // TODO: search field
     // TODO: play button
     // TODO: use bottleneck library to avoid 429s
@@ -246,15 +261,18 @@ const truncateString = (str?: string, num?: number) => {
 const PlaylistsMetadata = () => {
   const { playlists } = useLoaderData() as LoaderResponse;
 
-  const tableRows = playlists?.map(({ id, name, description, tracks }) => {
-    return (
-      <tr key={id}>
-        <td>{name}</td>
-        <td>{truncateString(description, 50)}</td>
-        <td>{tracks?.total}</td>
-      </tr>
-    );
-  });
+  const tableRows = playlists?.map(
+    ({ id, name, description, tracks }, index) => {
+      return (
+        <tr key={`playlist-${id}`}>
+          <td>{index + 1}</td>
+          <td>{name}</td>
+          <td>{truncateString(description, 50)}</td>
+          <td>{tracks?.total}</td>
+        </tr>
+      );
+    }
+  );
 
   return (
     <>
@@ -262,6 +280,7 @@ const PlaylistsMetadata = () => {
       <Table striped bordered hover>
         <thead>
           <tr>
+            <th>#</th>
             <th>Name</th>
             <th>Description</th>
             <th>Total Tracks</th>
