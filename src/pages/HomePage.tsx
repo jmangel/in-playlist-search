@@ -27,7 +27,7 @@ const scopes = [
 type LoaderResponse = {
   sdk?: SpotifyApi;
   profile?: UserProfile;
-  playlists?: Page<SimplifiedPlaylist>;
+  playlists?: SimplifiedPlaylist[];
   devices?: Devices;
   searchResults?: SearchResults<['artist']>;
 };
@@ -76,10 +76,29 @@ export const loader: LoaderFunction = async ({
 
   if (sdk) {
     const profilePromise = sdk.currentUser.profile();
-    const playlistsPromise = sdk.currentUser.playlists.playlists();
     const devicesPromise = sdk.player.getAvailableDevices();
     // @ts-ignore
     const searchResultsPromise = sdk.search('The Beatles', ['artist']);
+
+    const fetchPlaylists = async () => {
+      let fetchedPlaylists: SimplifiedPlaylist[] = [];
+      let offset, nextUrl;
+
+      do {
+        const playlistsResponse: Page<SimplifiedPlaylist> =
+          await sdk.currentUser.playlists.playlists(undefined, offset);
+
+        const { items, next, limit } = playlistsResponse;
+
+        fetchedPlaylists = fetchedPlaylists.concat(items);
+        nextUrl = next;
+        offset = playlistsResponse.offset + limit;
+      } while (nextUrl);
+
+      return fetchedPlaylists;
+    };
+
+    const playlistsPromise = fetchPlaylists();
 
     [profile, playlists, devices, searchResults] = await Promise.all([
       profilePromise,
