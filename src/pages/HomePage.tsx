@@ -3,6 +3,7 @@ import {
   Devices,
   SearchResults,
   SpotifyApi,
+  UserProfile,
 } from '@spotify/web-api-ts-sdk';
 import { useEffect, useState } from 'react';
 import { Form } from 'react-bootstrap';
@@ -23,6 +24,7 @@ const scopes = [
 
 type LoaderResponse = {
   sdk?: SpotifyApi;
+  profile?: UserProfile;
   devices?: Devices;
   searchResults?: SearchResults<['artist']>;
 };
@@ -67,9 +69,10 @@ export const loader: LoaderFunction = async ({
 }): Promise<LoaderResponse> => {
   const sdk = await getSdk();
 
-  let devices, searchResults;
+  let profile, devices, searchResults;
 
   if (sdk) {
+    profile = await sdk.currentUser.profile();
     devices = await sdk.player.getAvailableDevices();
     // @ts-ignore
     searchResults = await sdk.search('The Beatles', ['artist']);
@@ -77,6 +80,7 @@ export const loader: LoaderFunction = async ({
 
   return {
     sdk,
+    profile,
     devices,
     searchResults,
   };
@@ -87,6 +91,7 @@ function HomePage() {
 
   return sdk ? (
     <>
+      <ProfileInfo />
       <DevicesInput />
       <SpotifySearch />
     </>
@@ -94,6 +99,28 @@ function HomePage() {
     <></>
   );
 }
+
+const ProfileInfo = () => {
+  const { profile } = useLoaderData() as LoaderResponse;
+
+  const { display_name: name, external_urls: { spotify: url = '' } = {} } =
+    profile || {};
+
+  return name ? (
+    <h1>
+      Logged in as{' '}
+      {url ? (
+        <a target="_blank" href={url} rel="noreferrer">
+          {name}
+        </a>
+      ) : (
+        name
+      )}
+    </h1>
+  ) : (
+    <></>
+  );
+};
 
 const DevicesInput = () => {
   const { devices } = useLoaderData() as LoaderResponse;
