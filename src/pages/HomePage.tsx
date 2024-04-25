@@ -100,7 +100,13 @@ export const loader: LoaderFunction = async ({
       sdk.player.getAvailableDevices()
     );
 
-    const scheduleGettingPlaylistsPage = async (offset = 0) => {
+    type PlaylistPagePromise = Promise<{
+      playlistMetadataPage: { total: number; limit: number; items: any[] };
+      playlistsDetails: any[];
+    }>;
+    const scheduleGettingPlaylistsPage = async (
+      offset = 0
+    ): PlaylistPagePromise => {
       return requestQueue.schedule(() =>
         sdk.currentUser.playlists
           .playlists(undefined, offset)
@@ -129,7 +135,7 @@ export const loader: LoaderFunction = async ({
 
         let offset = limit;
 
-        let promises = [];
+        let promises: PlaylistPagePromise[] = [];
 
         while (offset < total) {
           promises.push(scheduleGettingPlaylistsPage(offset));
