@@ -22,6 +22,9 @@ const scopes = [
   'user-modify-playback-state',
 ];
 
+const playlistFields =
+  'name,owner(id),description,snapshot_id,tracks.items(track(artists.name),track(id,name,uri,album(name)))';
+
 type LoaderResponse = {
   sdk?: SpotifyApi;
   profile?: UserProfile;
@@ -76,7 +79,20 @@ export const loader: LoaderFunction = async ({
     const devicesPromise = sdk.player.getAvailableDevices();
 
     const getPlaylistsPage = async (offset = 0) => {
-      return sdk.currentUser.playlists.playlists(undefined, offset);
+      return sdk.currentUser.playlists
+        .playlists(undefined, offset)
+        .then((playlistMetadatas) => {
+          // playlistMetadatas.items.map(async ({ id }) => {
+          //   const playlist = await sdk.playlists.getPlaylist(
+          //     id,
+          //     undefined,
+          //     playlistFields
+          //   );
+          //   console.log(playlist);
+          // });
+
+          return playlistMetadatas;
+        });
     };
 
     const playlistsPromise = getPlaylistsPage().then(
