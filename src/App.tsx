@@ -1,9 +1,13 @@
 import React from 'react';
 import './App.css';
-import Root from './routes/root'
-import { RouteObject, RouterProvider, createBrowserRouter } from 'react-router-dom';
+import Root from './routes/root';
+import {
+  RouteObject,
+  RouterProvider,
+  createBrowserRouter,
+} from 'react-router-dom';
 import ErrorPage from './pages/ErrorPage';
-import HomePage from './pages/HomePage';
+import HomePage, { loader as homePageLoader } from './pages/HomePage';
 
 const App = () => {
   const routes: RouteObject[] = [
@@ -12,19 +16,16 @@ const App = () => {
       element: <Root />,
       errorElement: <ErrorPage />,
       children: [
-        {
-          index: true,
+        ...['/', '/callback'].map((path) => ({
+          path: path,
           element: <HomePage />,
-        },
-        {
-          path: '/callback',
-          element: <HomePage />,
-        },
+          loader: homePageLoader,
+        })),
       ],
     },
   ];
 
-  return <RouterProvider router={createBrowserRouter(routes)} />
-}
+  return <RouterProvider router={createBrowserRouter(routes)} />;
+};
 
 export default App;

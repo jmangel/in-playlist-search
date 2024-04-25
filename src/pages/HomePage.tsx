@@ -1,6 +1,12 @@
-import { useSpotify } from '../hooks/useSpotify';
-import { SearchResults, SpotifyApi } from '@spotify/web-api-ts-sdk';
-import { useEffect, useState } from 'react'
+import {
+  AuthorizationCodeWithPKCEStrategy,
+  Devices,
+  SearchResults,
+  SpotifyApi,
+} from '@spotify/web-api-ts-sdk';
+import { useEffect, useState } from 'react';
+import { Form } from 'react-bootstrap';
+import { LoaderFunction, useLoaderData } from 'react-router-dom';
 
 const clientId = process.env.REACT_APP_CLIENT_ID || '';
 const redirectUrl = `${process.env.REACT_APP_HOST_URI}/callback`;
@@ -15,33 +21,124 @@ const scopes = [
   'user-modify-playback-state',
 ];
 
-function HomePage() {
+type LoaderResponse = {
+  sdk?: SpotifyApi;
+  devices?: Devices;
+  searchResults?: SearchResults<['artist']>;
+};
 
-  const sdk = useSpotify(
-    // import.meta.env.VITE_SPOTIFY_CLIENT_ID,
+export const getSdk = async () => {
+  const auth = new AuthorizationCodeWithPKCEStrategy(
     clientId,
-    // import.meta.env.VITE_REDIRECT_TARGET,
     redirectUrl,
-    scopes,
+    scopes
   );
+  const internalSdk = new SpotifyApi(auth);
 
-  return sdk
-    ? (<SpotifySearch sdk={sdk} />)
-    : (<></>);
+  let sdk;
+
+  try {
+    const { authenticated } = await internalSdk.authenticate();
+
+    if (authenticated) {
+      sdk = internalSdk;
+    }
+  } catch (e: Error | unknown) {
+    const error = e as Error;
+    if (
+      error &&
+      error.message &&
+      error.message.includes('No verifier found in cache')
+    ) {
+      console.error(
+        "If you are seeing this error in a React Development Environment it's because React calls useEffect twice. Using the Spotify SDK performs a token exchange that is only valid once, so React re-rendering this component will result in a second, failed authentication. This will not impact your production applications (or anything running outside of Strict Mode - which is designed for debugging components).",
+        error
+      );
+    } else {
+      console.error(e);
+    }
+  }
+
+  return sdk;
+};
+
+export const loader: LoaderFunction = async ({
+  request,
+}): Promise<LoaderResponse> => {
+  const sdk = await getSdk();
+
+  let devices, searchResults;
+
+  if (sdk) {
+    devices = await sdk.player.getAvailableDevices();
+    // @ts-ignore
+    searchResults = await sdk.search('The Beatles', ['artist']);
+  }
+
+  return {
+    sdk,
+    devices,
+    searchResults,
+  };
+};
+
+function HomePage() {
+  const { sdk } = useLoaderData() as LoaderResponse;
+
+  return sdk ? (
+    <>
+      <DevicesInput />
+      <SpotifySearch />
+    </>
+  ) : (
+    <></>
+  );
 }
 
-function SpotifySearch({ sdk }: { sdk: SpotifyApi}) {
-  const [results, setResults] = useState<SearchResults<["artist"]>>({} as SearchResults<["artist"]>);
+const DevicesInput = () => {
+  const { devices } = useLoaderData() as LoaderResponse;
+  const [selectedDeviceId, setSelectedDeviceId] = useState('');
 
-  useEffect(() => {
-    (async () => {
-      // @ts-ignore
-      const results = await sdk.search("The Beatles", ["artist"]);
-      setResults(() => results);
-    })();
-  }, [sdk]);
+  useEffect(
+    () =>
+      setSelectedDeviceId(
+        (selectedDeviceId) =>
+          devices?.devices?.find(({ is_active }) => is_active)?.id ||
+          selectedDeviceId ||
+          ''
+      ),
+    [devices]
+  );
 
-  const tableRows = results.artists?.items.map((artist) => {
+  return (
+    <div className="d-flex">
+      <Form.Label className="flex-shrink-0 pr-1">Playing on</Form.Label>
+      <Form.Select
+        className="flex-grow-1 mx-2"
+        name="select"
+        value={selectedDeviceId}
+        onChange={(e) => setSelectedDeviceId(e.target.value)}
+      >
+        <option value=""></option>
+        {devices?.devices
+          ?.filter(({ id }) => !!id)
+          .map(({ name, id }) => (
+            <option key={`device-${id}`} value={id!}>
+              {name}
+            </option>
+          ))}
+      </Form.Select>
+      {/* <Button onClick={loadDevices} className="flex-shrink-0">
+        Refresh devices
+      </Button> */}
+    </div>
+  );
+};
+
+const SpotifySearch = () => {
+  const { searchResults } = useLoaderData() as LoaderResponse;
+
+  const tableRows = searchResults?.artists?.items.map((artist) => {
     return (
       <tr key={artist.id}>
         <td>{artist.name}</td>
@@ -62,12 +159,10 @@ function SpotifySearch({ sdk }: { sdk: SpotifyApi}) {
             <th>Followers</th>
           </tr>
         </thead>
-        <tbody>
-          {tableRows}
-        </tbody>
+        <tbody>{tableRows}</tbody>
       </table>
     </>
-  )
-}
+  );
+};
 
 export default HomePage;
