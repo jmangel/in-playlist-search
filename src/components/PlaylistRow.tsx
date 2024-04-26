@@ -36,7 +36,9 @@ const PlaylistRow = (props: Props) => {
 
   const { profile } = useLoaderData() as HomePageLoaderResponse;
 
-  const [showAllTracks, setShowAllTracks] = useState(false);
+  const [showTracks, setShowTracks] = useState(false);
+  const [includeNonMatchingTracks, setIncludeNonMatchingTracks] =
+    useState(false);
 
   const isOwner = owner.id === profile?.id;
   const hasMissingOrExtraTracks = tracks.items.length !== tracks.total;
@@ -60,10 +62,17 @@ const PlaylistRow = (props: Props) => {
         <td>
           <Form.Check
             type="switch"
-            id="show-all-tracks"
-            label="Show All Tracks"
-            checked={showAllTracks}
-            onChange={(e) => setShowAllTracks(e.target.checked)}
+            id="show-tracks"
+            label="Show Tracks"
+            checked={showTracks}
+            onChange={(e) => setShowTracks(e.target.checked)}
+          />
+          <Form.Check
+            type="switch"
+            id="include-non-matching-tracks"
+            label="Include Non-Matching Tracks"
+            checked={includeNonMatchingTracks}
+            onChange={(e) => setIncludeNonMatchingTracks(e.target.checked)}
           />
         </td>
         <td>
@@ -80,7 +89,7 @@ const PlaylistRow = (props: Props) => {
           {hasMissingOrExtraTracks ? ` / ${tracks.total}` : ''}
         </td>
       </tr>
-      {showAllTracks && (
+      {showTracks && (
         <>
           <tr>
             <th colSpan={6}>Tracks</th>
@@ -93,24 +102,28 @@ const PlaylistRow = (props: Props) => {
             <th colSpan={1}>Album</th>
           </tr>
 
-          {tracks.items.map((track, index) => (
-            <tr key={track.track.id}>
-              <td>{index}</td>
-              {/* <td>
+          {tracks.items.map(({ track }, index) =>
+            includeNonMatchingTracks || trackMatches(searchQuery, track) ? (
+              <tr key={track.id}>
+                <td>{index}</td>
+                {/* <td>
                 <Button
-                  onClick={() => playPlaylistTrack(track.track.uri, index)}
+                  onClick={() => playPlaylistTrack(track.uri, index)}
                   color="primary"
                 >
                   ►
                 </Button>
               </td> */}
-              <td colSpan={2}>
-                {track.track.artists.map((artist) => artist.name).join(', ')}
-              </td>
-              <td colSpan={1}>{track.track.name}</td>
-              <td colSpan={1}>{track.track.album.name}</td>
-            </tr>
-          ))}
+                <td colSpan={2}>
+                  {track.artists.map((artist) => artist.name).join(', ')}
+                </td>
+                <td colSpan={1}>{track.name}</td>
+                <td colSpan={1}>{track.album.name}</td>
+              </tr>
+            ) : (
+              <></>
+            )
+          )}
         </>
       )}
     </>
