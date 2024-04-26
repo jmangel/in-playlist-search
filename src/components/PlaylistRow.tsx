@@ -65,15 +65,14 @@ const PlaylistRow = (props: Props) => {
     ? tracks.items.map(({ track }, index) =>
         includeNonMatchingTracks || trackMatches(searchQuery, track) ? (
           <tr key={track.id}>
-            <td>{index + 1}</td>
-            {/* <td>
-              <Button
-                onClick={() => playPlaylistTrack(track.uri, index)}
-                color="primary"
-              >
-                ►
-              </Button>
-            </td> */}
+            <td>
+              <div className="d-flex">
+                {index + 1}
+                <Button variant="link" disabled className="lh-sm pt-0">
+                  <i className="bi bi-play-circle-fill text-success" />
+                </Button>
+              </div>
+            </td>
             <td colSpan={1}>{track.name}</td>
             <td colSpan={2}>
               {track.artists.map((artist) => artist.name).join(', ')}
