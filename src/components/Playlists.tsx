@@ -35,8 +35,11 @@ const truncateString = (str?: string, num?: number) => {
 };
 
 const Playlists = () => {
-  const { playlistPage: firstPlaylistPage, sdk } =
-    useLoaderData() as HomePageLoaderResponse;
+  const {
+    playlistPage: firstPlaylistPage,
+    sdk,
+    profile,
+  } = useLoaderData() as HomePageLoaderResponse;
 
   const { requestQueue, counts } = useBottleneck(SPOTIFY_BOTTLENECK_OPTIONS);
 
@@ -116,18 +119,24 @@ const Playlists = () => {
           <tr>
             <th>#</th>
             <th>Name</th>
+            <th>Owner</th>
             <th>Description</th>
             <th>Tracks</th>
           </tr>
         </thead>
         <tbody>
           {Object.values(playlistsDetails || {})?.map(
-            ({ id, name, description, tracks }, index) => {
+            ({ id, name, description, tracks, owner }, index) => {
+              const isOwner = owner.id === profile?.id;
               const isMissingTracks = tracks.items.length < tracks.total;
+
               return (
                 <tr key={`playlist-${id}`}>
                   <td>{index + 1}</td>
                   <td>{name}</td>
+                  <td className={isOwner ? 'fw-bold' : ''}>
+                    {isOwner ? 'me' : owner.display_name}
+                  </td>
                   <td>{truncateString(description, 50)}</td>
                   <td className={isMissingTracks ? 'bg-danger' : ''}>
                     {tracks.items.length}
