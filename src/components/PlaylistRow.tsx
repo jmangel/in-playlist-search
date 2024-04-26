@@ -1,7 +1,7 @@
 import { Playlist, Track } from '@spotify/web-api-ts-sdk';
 import { LoaderResponse as HomePageLoaderResponse } from '../pages/HomePage';
 import { useLoaderData } from 'react-router-dom';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Form } from 'react-bootstrap';
 
 const truncateString = (str?: string, num?: number) => {
@@ -10,12 +10,21 @@ const truncateString = (str?: string, num?: number) => {
   return str.length > num ? str.slice(0, num) + '...' : str;
 };
 
+const trackMatches = (searchQuery: string, track: Track) =>
+  !!track &&
+  `${track.name} ${track.artists.map(({ name }) => name).join(' ')} ${
+    track.album.name
+  }`
+    .toLowerCase()
+    .includes(searchQuery);
+
 type Props = {
   playlist: Playlist<Track>;
   index: number;
+  searchQuery: string;
 };
 const PlaylistRow = (props: Props) => {
-  const { playlist, index } = props;
+  const { playlist, index, searchQuery } = props;
   const {
     id,
     name,
@@ -31,6 +40,18 @@ const PlaylistRow = (props: Props) => {
 
   const isOwner = owner.id === profile?.id;
   const hasMissingOrExtraTracks = tracks.items.length !== tracks.total;
+
+  const matchesSearchTerm = useMemo(() => {
+    if (!searchQuery) return true;
+    return (
+      name.toLowerCase().includes(searchQuery) ||
+      owner.display_name.toLowerCase().includes(searchQuery) ||
+      description.toLowerCase().includes(searchQuery) ||
+      tracks.items.some((track) => trackMatches(searchQuery, track.track))
+    );
+  }, [searchQuery, name, owner.display_name, description, tracks]);
+
+  if (!matchesSearchTerm) return null;
 
   return (
     <>

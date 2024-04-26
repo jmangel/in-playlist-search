@@ -185,7 +185,12 @@ const Playlists = () => {
         </thead>
         <tbody>
           {Object.values(playlistsDetails || {})?.map((playlist, index) => (
-            <PlaylistRow key={playlist.id} playlist={playlist} index={index} />
+            <PlaylistRow
+              key={playlist.id}
+              playlist={playlist}
+              index={index}
+              searchQuery={searchQuery}
+            />
           ))}
         </tbody>
       </Table>
