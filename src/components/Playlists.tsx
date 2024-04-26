@@ -65,17 +65,9 @@ const Playlists = () => {
                   'Loaded offset page of playlist tracks, but playlist not found in playlistsDetails'
                 );
 
-              // if too short, lengthen playlist.tracks.items with empty spaces to fill with new tracks
-              playlist.tracks.items.length = Math.max(
-                playlist.tracks.items.length,
-                offset + tracksPage.items.length
-              );
-              // place new tracks into the correct indexes (overwriting if needed)
-              playlist.tracks.items.splice(
-                offset,
-                tracksPage.items.length,
-                ...tracksPage.items
-              );
+              tracksPage.items.forEach((track, index) => {
+                playlist.tracks.items[offset + index] = track;
+              });
 
               return {
                 ...playlistsDetails,
