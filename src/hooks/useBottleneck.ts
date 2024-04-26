@@ -4,7 +4,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Bottleneck from 'bottleneck';
-import { SPOTIFY_RATE_LIMIT_WINDOW_SECONDS } from '../pages/HomePage';
+import { SPOTIFY_RATE_LIMIT_WINDOW_SECONDS } from '../components/Playlists';
 
 console.warn('searchme useBottleneck top-level, CREATING REQUEST QUEUE');
 
