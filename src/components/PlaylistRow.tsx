@@ -1,7 +1,7 @@
 import { Playlist, Track } from '@spotify/web-api-ts-sdk';
 import { LoaderResponse as HomePageLoaderResponse } from '../pages/HomePage';
 import { useLoaderData } from 'react-router-dom';
-import { useMemo, useState } from 'react';
+import { MouseEventHandler, useMemo, useState } from 'react';
 import { Button, Form } from 'react-bootstrap';
 import * as DOMPurify from 'dompurify';
 
@@ -23,6 +23,35 @@ const trackMatches = (searchQuery: string, track: Track) => {
 
   return searchWords.every((word) => matchableString.includes(word));
 };
+
+type IndexTableRowWithLinkButtonProps = {
+  index: number;
+  iconName: string;
+  onClick?: MouseEventHandler<HTMLButtonElement>;
+  disabled?: boolean;
+  className?: string;
+};
+const IndexTableRowWithLinkButton = ({
+  index,
+  iconName,
+  onClick,
+  disabled,
+  className = '',
+}: IndexTableRowWithLinkButtonProps) => (
+  <td>
+    <div className="d-flex">
+      {index + 1}
+      <Button
+        variant="link"
+        onClick={onClick}
+        disabled={disabled}
+        className="lh-sm pt-0"
+      >
+        <i className={`bi bi-${iconName} ${className}`} />
+      </Button>
+    </div>
+  </td>
+);
 
 type Props = {
   playlist: Playlist<Track>;
@@ -65,14 +94,11 @@ const PlaylistRow = (props: Props) => {
     ? tracks.items.map(({ track }, index) =>
         includeNonMatchingTracks || trackMatches(searchQuery, track) ? (
           <tr key={track.id}>
-            <td>
-              <div className="d-flex">
-                {index + 1}
-                <Button variant="link" disabled className="lh-sm pt-0">
-                  <i className="bi bi-play-circle-fill text-success" />
-                </Button>
-              </div>
-            </td>
+            <IndexTableRowWithLinkButton
+              index={index}
+              iconName="play-circle-fill"
+              className="text-success"
+            />
             <td colSpan={1}>{track.name}</td>
             <td colSpan={2}>
               {track.artists.map((artist) => artist.name).join(', ')}
@@ -88,20 +114,11 @@ const PlaylistRow = (props: Props) => {
   return (
     <>
       <tr key={`playlist-${id}`}>
-        <td>
-          <div className="d-flex">
-            {index + 1}
-            <Button
-              variant="link"
-              onClick={() => setShowTracks((prev) => !prev)}
-              className="lh-sm pt-0"
-            >
-              <i
-                className={`bi bi-arrows-${showTracks ? 'collapse' : 'expand'}`}
-              />
-            </Button>
-          </div>
-        </td>
+        <IndexTableRowWithLinkButton
+          index={index}
+          iconName={`arrows-${showTracks ? 'collapse' : 'expand'}`}
+          onClick={() => setShowTracks((prev) => !prev)}
+        />
         <td>
           <a target="_blank" href={href} rel="noreferrer">
             <strong>{name}</strong>
