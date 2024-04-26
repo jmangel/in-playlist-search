@@ -19,7 +19,7 @@ const PlaylistRow = (props: Props) => {
   const { profile } = useLoaderData() as HomePageLoaderResponse;
 
   const isOwner = owner.id === profile?.id;
-  const isMissingTracks = tracks.items.length < tracks.total;
+  const hasMissingOrExtraTracks = tracks.items.length !== tracks.total;
 
   return (
     <tr key={`playlist-${id}`}>
@@ -29,9 +29,9 @@ const PlaylistRow = (props: Props) => {
         {isOwner ? 'me' : owner.display_name}
       </td>
       <td>{truncateString(description, 50)}</td>
-      <td className={isMissingTracks ? 'bg-danger' : ''}>
+      <td className={hasMissingOrExtraTracks ? 'bg-danger' : ''}>
         {tracks.items.length}
-        {isMissingTracks ? ` / ${tracks.total}` : ''}
+        {hasMissingOrExtraTracks ? ` / ${tracks.total}` : ''}
       </td>
     </tr>
   );
