@@ -159,6 +159,7 @@ const Playlists = () => {
         <thead>
           <tr>
             <th>#</th>
+            <th></th>
             <th>Name</th>
             <th>Owner</th>
             <th>Description</th>
