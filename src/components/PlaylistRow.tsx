@@ -57,9 +57,14 @@ type Props = {
   playlist: Playlist<Track>;
   index: number;
   searchQuery: string;
+  playPlaylistTrack: (
+    playlistUri: string,
+    songUri: string,
+    offsetPosition: number
+  ) => void;
 };
 const PlaylistRow = (props: Props) => {
-  const { playlist, index, searchQuery } = props;
+  const { playlist, index, searchQuery, playPlaylistTrack } = props;
   const {
     id,
     name,
@@ -98,6 +103,7 @@ const PlaylistRow = (props: Props) => {
               index={index}
               iconName="play-circle-fill"
               className="text-success"
+              onClick={() => playPlaylistTrack(playlist.uri, track.uri, index)}
             />
             <td colSpan={1}>{track.name}</td>
             <td colSpan={2}>

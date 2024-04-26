@@ -1,4 +1,10 @@
-import { Dispatch, SetStateAction, useEffect, useState } from 'react';
+import {
+  Dispatch,
+  SetStateAction,
+  useCallback,
+  useEffect,
+  useState,
+} from 'react';
 import { LoaderFunction, useLoaderData } from 'react-router-dom';
 
 import { Col, Form, Row } from 'react-bootstrap';
@@ -6,6 +12,7 @@ import {
   AuthorizationCodeWithPKCEStrategy,
   Devices,
   Page,
+  PlaybackState,
   SimplifiedPlaylist,
   SpotifyApi,
   UserProfile,
@@ -80,7 +87,6 @@ export const loader: LoaderFunction = async ({
     const playlistPagePromise = sdk.currentUser.playlists.playlists();
     const devicesPromise = sdk.player.getAvailableDevices();
 
-    // TODO: play button
     // TODO: save/copy button
     // TODO: use bottleneck library to avoid 429s
     // TODO: handle 429s (re-queue)
@@ -112,6 +118,60 @@ function HomePage() {
 
   const [selectedDeviceId, setSelectedDeviceId] = useState('');
 
+  const playPlaylistTrack = useCallback(
+    (playlistUri: string, songUri: string, offsetPosition: number) => {
+      if (!sdk) return;
+
+      const playWithOffsetOptions = (offsetOptions: object) =>
+        sdk.player.startResumePlayback(
+          selectedDeviceId,
+          playlistUri,
+          undefined,
+          offsetOptions
+        );
+
+      const playViaPositionOffset = () =>
+        playWithOffsetOptions({
+          position: offsetPosition,
+        });
+
+      const playViaSongUri = () =>
+        playWithOffsetOptions({
+          uri: songUri,
+        });
+
+      const waitThenCheckPlaybackState = () =>
+        new Promise<PlaybackState>((resolve) => {
+          setTimeout(() => sdk.player.getPlaybackState().then(resolve), 1000);
+        });
+
+      // TODO: handle 404 device not found
+
+      // play from the position first, to force the device to load the playlist
+      // (if we play with the specific song uri and it isn't loaded,
+      // it will simply fail and the device won't load the playlist)
+      playViaPositionOffset().then(() =>
+        waitThenCheckPlaybackState().then((playbackState) => {
+          const { item } = playbackState;
+          if (item?.uri !== songUri) {
+            // wait 2 seconds to let the device refresh the playlist
+            setTimeout(() => {
+              playViaSongUri().then(() => {
+                // if songUri still isn't present on device, then spotify stops
+                // playing, but still returns 204, so again we have to check the
+                // playback state, and play via position offset if needed
+                waitThenCheckPlaybackState().then((playbackState) => {
+                  if (!playbackState?.is_playing) playViaPositionOffset();
+                });
+              });
+            }, 2000);
+          }
+        })
+      );
+    },
+    [sdk, selectedDeviceId]
+  );
+
   return sdk ? (
     <>
       <Row className="align-items-center">
@@ -125,7 +185,7 @@ function HomePage() {
           />
         </Col>
       </Row>
-      <Playlists />
+      <Playlists playPlaylistTrack={playPlaylistTrack} />
     </>
   ) : (
     <></>

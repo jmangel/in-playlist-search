@@ -30,7 +30,15 @@ const PLAYLIST_FIELDS = `name,owner(id,display_name),description,snapshot_id,tra
 
 // const SPOTIFY_GREEN = '#1DB954';
 
-const Playlists = () => {
+type Props = {
+  playPlaylistTrack: (
+    playlistUri: string,
+    songUri: string,
+    offsetPosition: number
+  ) => void;
+};
+const Playlists = (props: Props) => {
+  const { playPlaylistTrack } = props;
   const { playlistPage: firstPlaylistPage, sdk } =
     useLoaderData() as HomePageLoaderResponse;
 
@@ -93,7 +101,7 @@ const Playlists = () => {
       if (!playlistPage.next) setAllPlaylistPagesLoaded(true);
 
       if (!!sdk && !!playlistPage?.items)
-        playlistPage.items.map(async ({ id, external_urls }) =>
+        playlistPage.items.map(async ({ id, external_urls, uri }) =>
           requestQueue
             .schedule(() =>
               sdk.playlists.getPlaylist(id, undefined, PLAYLIST_FIELDS)
@@ -101,6 +109,7 @@ const Playlists = () => {
             .then((playlist) => {
               playlist.id = id;
               playlist.external_urls = external_urls;
+              playlist.uri = uri;
 
               setPlaylistsDetails((playlistsDetails) => ({
                 ...playlistsDetails,
@@ -203,6 +212,7 @@ const Playlists = () => {
               playlist={playlist}
               index={index}
               searchQuery={searchQuery}
+              playPlaylistTrack={playPlaylistTrack}
             />
           ))}
         </tbody>
