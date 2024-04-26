@@ -16,7 +16,14 @@ type Props = {
 };
 const PlaylistRow = (props: Props) => {
   const { playlist, index } = props;
-  const { id, name, description, tracks, owner } = playlist;
+  const {
+    id,
+    name,
+    description,
+    tracks,
+    owner,
+    external_urls: { spotify: href } = {},
+  } = playlist;
 
   const { profile } = useLoaderData() as HomePageLoaderResponse;
 
@@ -38,7 +45,11 @@ const PlaylistRow = (props: Props) => {
             onChange={(e) => setShowAllTracks(e.target.checked)}
           />
         </td>
-        <td>{name}</td>
+        <td>
+          <a target="_blank" href={href} rel="noreferrer">
+            <strong>{name}</strong>
+          </a>
+        </td>
         <td className={isOwner ? 'fw-bold' : ''}>
           {isOwner ? 'me' : owner.display_name}
         </td>

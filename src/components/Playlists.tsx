@@ -83,13 +83,15 @@ const Playlists = () => {
   const queueLoadPlaylistDetails = useCallback(
     (playlistPage: Page<SimplifiedPlaylist>) => {
       if (!!sdk && !!playlistPage?.items)
-        playlistPage.items.map(async ({ id }) =>
+        playlistPage.items.map(async ({ id, external_urls }) =>
           requestQueue
             .schedule(() =>
               sdk.playlists.getPlaylist(id, undefined, PLAYLIST_FIELDS)
             )
             .then((playlist) => {
               playlist.id = id;
+              playlist.external_urls = external_urls;
+
               setPlaylistsDetails((playlistsDetails) => ({
                 ...playlistsDetails,
                 [id]: playlist,
