@@ -55,6 +55,31 @@ const PlaylistRow = (props: Props) => {
 
   if (!matchesSearchTerm) return null;
 
+  const trackRows = showTracks
+    ? tracks.items.map(({ track }, index) =>
+        includeNonMatchingTracks || trackMatches(searchQuery, track) ? (
+          <tr key={track.id}>
+            <td>{index}</td>
+            <td>
+              {/* <Button
+                onClick={() => playPlaylistTrack(track.uri, index)}
+                color="primary"
+              >
+                ►
+              </Button> */}
+            </td>
+            <td colSpan={2}>
+              {track.artists.map((artist) => artist.name).join(', ')}
+            </td>
+            <td colSpan={1}>{track.name}</td>
+            <td colSpan={1}>{track.album.name}</td>
+          </tr>
+        ) : (
+          <></>
+        )
+      )
+    : [];
+
   return (
     <>
       <tr key={`playlist-${id}`}>
@@ -89,41 +114,28 @@ const PlaylistRow = (props: Props) => {
           {hasMissingOrExtraTracks ? ` / ${tracks.total}` : ''}
         </td>
       </tr>
-      {showTracks && (
+      {trackRows.length > 0 && (
         <>
           <tr>
-            <th colSpan={6}>Tracks</th>
+            <th colSpan={6} className="border-0 border-bottom border-success">
+              Tracks
+            </th>
           </tr>
           <tr>
             <th>#</th>
-            {/* <th></th> */}
+            <th></th>
             <th colSpan={2}>Artist</th>
             <th colSpan={1}>Track</th>
             <th colSpan={1}>Album</th>
           </tr>
 
-          {tracks.items.map(({ track }, index) =>
-            includeNonMatchingTracks || trackMatches(searchQuery, track) ? (
-              <tr key={track.id}>
-                <td>{index}</td>
-                {/* <td>
-                <Button
-                  onClick={() => playPlaylistTrack(track.uri, index)}
-                  color="primary"
-                >
-                  ►
-                </Button>
-              </td> */}
-                <td colSpan={2}>
-                  {track.artists.map((artist) => artist.name).join(', ')}
-                </td>
-                <td colSpan={1}>{track.name}</td>
-                <td colSpan={1}>{track.album.name}</td>
-              </tr>
-            ) : (
-              <></>
-            )
-          )}
+          {trackRows}
+
+          <tr>
+            <th colSpan={6} className="border-0 border-bottom border-primary">
+              More Playlists
+            </th>
+          </tr>
         </>
       )}
     </>
