@@ -98,13 +98,6 @@ const PlaylistRow = (props: Props) => {
             checked={showTracks}
             onChange={(e) => setShowTracks(e.target.checked)}
           />
-          <Form.Check
-            type="switch"
-            id="include-non-matching-tracks"
-            label="Include Non-Matching Tracks"
-            checked={includeNonMatchingTracks}
-            onChange={(e) => setIncludeNonMatchingTracks(e.target.checked)}
-          />
         </td>
         <td>
           <a target="_blank" href={href} rel="noreferrer">
@@ -131,7 +124,19 @@ const PlaylistRow = (props: Props) => {
         <>
           <tr>
             <th colSpan={6} className="border-0 border-bottom border-success">
-              Tracks
+              <div className="d-flex">
+                Tracks{' '}
+                <Form.Check
+                  type="switch"
+                  id="include-non-matching-tracks"
+                  label="Include Non-Matching Tracks"
+                  checked={includeNonMatchingTracks}
+                  onChange={(e) =>
+                    setIncludeNonMatchingTracks(e.target.checked)
+                  }
+                  className="ms-2"
+                />
+              </div>
             </th>
           </tr>
           <tr>
