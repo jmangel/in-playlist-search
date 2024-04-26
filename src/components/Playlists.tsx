@@ -23,8 +23,9 @@ const SPOTIFY_BOTTLENECK_OPTIONS = {
   trackDoneStatus: true,
 };
 
-const PLAYLIST_FIELDS =
-  'name,owner(id,display_name),description,snapshot_id,tracks.total,tracks.items(track(artists.name),track(id,name,uri,album(name)))';
+const PLAYLIST_ITEMS_FIELDS = 'track(id,name,uri,album(name)))';
+const PLAYLIST_TRACKS_FIELDS = `offset,limit,items(track(artists.name),${PLAYLIST_ITEMS_FIELDS}`;
+const PLAYLIST_FIELDS = `name,owner(id,display_name),description,snapshot_id,tracks(total,offset,limit),tracks.items(track(artists.name),${PLAYLIST_ITEMS_FIELDS}`;
 
 // const SPOTIFY_GREEN = '#1DB954';
 
@@ -53,6 +54,39 @@ const Playlists = () => {
     [key: string]: Playlist<Track>;
   }>();
 
+  const queueLoadTracksPage = useCallback(
+    async (playlistId: string, offset = 0) => {
+      return requestQueue.schedule(() =>
+        sdk!.playlists
+          .getPlaylistItems(
+            playlistId,
+            undefined,
+            PLAYLIST_TRACKS_FIELDS,
+            undefined,
+            offset
+          )
+          .then((tracksPage) => {
+            setPlaylistsDetails((playlistsDetails) => {
+              const playlist = playlistsDetails?.[playlistId];
+              if (!playlist)
+                throw new Error(
+                  'Loaded offset page of playlist tracks, but playlist not found in playlistsDetails'
+                );
+
+              playlist.tracks.items = playlist.tracks.items.concat(
+                tracksPage.items
+              );
+              return {
+                ...playlistsDetails,
+                [playlistId]: playlist,
+              };
+            });
+          })
+      );
+    },
+    [sdk, requestQueue]
+  );
+
   const queueLoadPlaylistDetails = useCallback(
     (playlistPage: Page<SimplifiedPlaylist>) => {
       if (!!sdk && !!playlistPage?.items)
@@ -67,13 +101,23 @@ const Playlists = () => {
                 ...playlistsDetails,
                 [id]: playlist,
               }));
+
+              const { limit, total } = playlist.tracks;
+
+              let offset = limit;
+
+              while (offset < total) {
+                queueLoadTracksPage(id, offset);
+
+                offset += limit;
+              }
             })
         );
     },
-    [sdk, requestQueue]
+    [sdk, requestQueue, queueLoadTracksPage]
   );
 
-  const queueLoadPlaylistPage = useCallback(
+  const queueLoadPlaylistsPage = useCallback(
     async (offset = 0) => {
       return requestQueue.schedule(() =>
         sdk!.currentUser.playlists
@@ -94,11 +138,16 @@ const Playlists = () => {
     let offset = limit;
 
     while (offset < total) {
-      queueLoadPlaylistPage(offset);
+      queueLoadPlaylistsPage(offset);
 
       offset += limit;
     }
-  }, [sdk, firstPlaylistPage, queueLoadPlaylistDetails, queueLoadPlaylistPage]);
+  }, [
+    sdk,
+    firstPlaylistPage,
+    queueLoadPlaylistDetails,
+    queueLoadPlaylistsPage,
+  ]);
 
   const numLoaded = Object.keys(playlistsDetails || {}).length;
   const numTotal = firstPlaylistPage?.total || 0;
