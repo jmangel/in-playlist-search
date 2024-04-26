@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLoaderData } from 'react-router-dom';
 
 import { Col, Form, ProgressBar, Row, Table } from 'react-bootstrap';
@@ -44,6 +44,11 @@ const Playlists = () => {
     !!counts?.RUNNING ||
     !!counts?.EXECUTING;
 
+  const [playlistsPages, setPlaylistsPages] = useState<
+    Page<SimplifiedPlaylist>[]
+  >([]);
+  const [allPlaylistPagesLoaded, setAllPlaylistPagesLoaded] = useState(false);
+
   const [playlistsDetails, setPlaylistsDetails] = useState<{
     [key: string]: Playlist<Track>;
   }>();
@@ -82,8 +87,11 @@ const Playlists = () => {
     [sdk, requestQueue]
   );
 
-  const queueLoadPlaylistDetails = useCallback(
+  const handleNewPlaylistPage = useCallback(
     (playlistPage: Page<SimplifiedPlaylist>) => {
+      setPlaylistsPages((playlistsPages) => [...playlistsPages, playlistPage]);
+      if (!playlistPage.next) setAllPlaylistPagesLoaded(true);
+
       if (!!sdk && !!playlistPage?.items)
         playlistPage.items.map(async ({ id, external_urls }) =>
           requestQueue
@@ -119,16 +127,16 @@ const Playlists = () => {
       return requestQueue.schedule(() =>
         sdk!.currentUser.playlists
           .playlists(undefined, offset)
-          .then(queueLoadPlaylistDetails)
+          .then(handleNewPlaylistPage)
       );
     },
-    [sdk, requestQueue, queueLoadPlaylistDetails]
+    [sdk, requestQueue, handleNewPlaylistPage]
   );
 
   useEffect(() => {
     if (!firstPlaylistPage || !sdk) return;
 
-    queueLoadPlaylistDetails(firstPlaylistPage);
+    handleNewPlaylistPage(firstPlaylistPage);
 
     const { total, limit } = firstPlaylistPage;
 
@@ -139,15 +147,18 @@ const Playlists = () => {
 
       offset += limit;
     }
-  }, [
-    sdk,
-    firstPlaylistPage,
-    queueLoadPlaylistDetails,
-    queueLoadPlaylistsPage,
-  ]);
+  }, [sdk, firstPlaylistPage, handleNewPlaylistPage, queueLoadPlaylistsPage]);
 
   const numLoaded = Object.keys(playlistsDetails || {}).length;
-  const numTotal = firstPlaylistPage?.total || 0;
+  const numTotal = useMemo(
+    () =>
+      allPlaylistPagesLoaded
+        ? new Set(
+            playlistsPages.flatMap(({ items }) => items.map(({ id }) => id))
+          ).size
+        : firstPlaylistPage?.total || 0,
+    [allPlaylistPagesLoaded, playlistsPages, firstPlaylistPage]
+  );
 
   return (
     <>
