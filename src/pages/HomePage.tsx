@@ -81,6 +81,7 @@ export const loader: LoaderFunction = async ({
     const devicesPromise = sdk.player.getAvailableDevices();
 
     // TODO: play button
+    // TODO: save/copy button
     // TODO: use bottleneck library to avoid 429s
     // TODO: handle 429s (re-queue)
     // TODO: handle 401s (refresh token)
