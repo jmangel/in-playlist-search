@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { Dispatch, SetStateAction, useEffect, useState } from 'react';
 import { LoaderFunction, useLoaderData } from 'react-router-dom';
 
 import { Col, Form, Row } from 'react-bootstrap';
@@ -110,6 +110,8 @@ export const loader: LoaderFunction = async ({
 function HomePage() {
   const { sdk } = useLoaderData() as LoaderResponse;
 
+  const [selectedDeviceId, setSelectedDeviceId] = useState('');
+
   return sdk ? (
     <>
       <Row className="align-items-center">
@@ -117,7 +119,10 @@ function HomePage() {
           <ProfileInfo />
         </Col>
         <Col className="flex-grow-1" xs={6} sm={4}>
-          <DevicesInput />
+          <DevicesInput
+            selectedDeviceId={selectedDeviceId}
+            setSelectedDeviceId={setSelectedDeviceId}
+          />
         </Col>
       </Row>
       <Playlists />
@@ -149,9 +154,14 @@ const ProfileInfo = () => {
   );
 };
 
-const DevicesInput = () => {
+type DevicesInputProps = {
+  selectedDeviceId: string;
+  setSelectedDeviceId: Dispatch<SetStateAction<string>>;
+};
+const DevicesInput = (props: DevicesInputProps) => {
+  const { selectedDeviceId, setSelectedDeviceId } = props;
+
   const { devices } = useLoaderData() as LoaderResponse;
-  const [selectedDeviceId, setSelectedDeviceId] = useState('');
 
   useEffect(
     () =>
@@ -161,7 +171,7 @@ const DevicesInput = () => {
           selectedDeviceId ||
           ''
       ),
-    [devices]
+    [devices, setSelectedDeviceId]
   );
 
   return (
