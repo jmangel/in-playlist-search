@@ -164,14 +164,17 @@ const Playlists = () => {
           />
         </Col>
       </Row>
-      <ProgressBar
-        animated={loading}
-        now={numLoaded}
-        max={numTotal}
-        label={`${numLoaded} / ${numTotal}`}
-        variant="success"
-        // style={{ backgroundColor: SPOTIFY_GREEN }}
-      />
+      <ProgressBar>
+        <ProgressBar
+          animated={loading}
+          now={numLoaded}
+          max={numTotal}
+          label={`${numLoaded} / ${numTotal}`}
+          variant="success"
+          style={{ minWidth: 70 }}
+          // style={{ backgroundColor: SPOTIFY_GREEN }}
+        />
+      </ProgressBar>
       <Table striped bordered hover>
         <thead>
           <tr>
