@@ -1,14 +1,17 @@
 import {
   AuthorizationCodeWithPKCEStrategy,
   Devices,
+  Page,
+  Playlist,
   SimplifiedPlaylist,
   SpotifyApi,
+  Track,
   UserProfile,
 } from '@spotify/web-api-ts-sdk';
-import { useEffect, useState } from 'react';
-import { Form, Table } from 'react-bootstrap';
+import { useCallback, useEffect, useState } from 'react';
+import { Form, ProgressBar, Table } from 'react-bootstrap';
 import { LoaderFunction, useLoaderData } from 'react-router-dom';
-import Bottleneck from 'bottleneck';
+import useBottleneck from '../hooks/useBottleneck';
 
 const clientId = process.env.REACT_APP_CLIENT_ID || '';
 const redirectUrl = `${process.env.REACT_APP_HOST_URI}/callback`;
@@ -23,13 +26,15 @@ const scopes = [
   'user-modify-playback-state',
 ];
 
-const playlistFields =
-  'name,owner(id),description,snapshot_id,tracks.items(track(artists.name),track(id,name,uri,album(name)))';
+const PLAYLIST_FIELDS =
+  'name,owner(id),description,snapshot_id,tracks.total,tracks.items(track(artists.name),track(id,name,uri,album(name)))';
+
+// const SPOTIFY_GREEN = '#1DB954';
 
 type LoaderResponse = {
   sdk?: SpotifyApi;
   profile?: UserProfile;
-  playlists?: SimplifiedPlaylist[];
+  playlistPage?: Page<SimplifiedPlaylist>;
   devices?: Devices;
 };
 
@@ -68,93 +73,29 @@ export const getSdk = async () => {
   return sdk;
 };
 
-const SPOTIFY_RATE_LIMIT_WINDOW_SECONDS = 30;
+export const SPOTIFY_RATE_LIMIT_WINDOW_SECONDS = 30;
 const SPOTIFY_APPROXIMATE_REQUESTS_PER_WINDOW = 120; // internet says 90
-const requestQueue = new Bottleneck({
+const SPOTIFY_BOTTLENECK_OPTIONS = {
   reservoir: SPOTIFY_APPROXIMATE_REQUESTS_PER_WINDOW,
   reservoirRefreshAmount: SPOTIFY_APPROXIMATE_REQUESTS_PER_WINDOW,
   reservoirRefreshInterval: SPOTIFY_RATE_LIMIT_WINDOW_SECONDS * 1000,
   maxConcurrent: SPOTIFY_APPROXIMATE_REQUESTS_PER_WINDOW,
   minTime: 50,
   trackDoneStatus: true,
-});
-
-requestQueue.on('failed', async (error, info) => {
-  if (error.message.includes('rate limit')) {
-    return SPOTIFY_RATE_LIMIT_WINDOW_SECONDS * 1000;
-  }
-});
+};
 
 export const loader: LoaderFunction = async ({
   request,
 }): Promise<LoaderResponse> => {
   const sdk = await getSdk();
 
-  let profile, playlists, devices;
+  let profile, playlistPage, devices;
 
   if (sdk) {
-    const profilePromise = requestQueue.schedule(() =>
-      sdk.currentUser.profile()
-    );
-    const devicesPromise = requestQueue.schedule(() =>
-      sdk.player.getAvailableDevices()
-    );
+    const profilePromise = sdk.currentUser.profile();
+    const playlistPagePromise = sdk.currentUser.playlists.playlists();
+    const devicesPromise = sdk.player.getAvailableDevices();
 
-    type PlaylistPagePromise = Promise<{
-      playlistMetadataPage: { total: number; limit: number; items: any[] };
-      playlistsDetails: any[];
-    }>;
-    const scheduleGettingPlaylistsPage = async (
-      offset = 0
-    ): PlaylistPagePromise => {
-      return requestQueue.schedule(() =>
-        sdk.currentUser.playlists
-          .playlists(undefined, offset)
-          .then(async (playlistMetadataPage) => {
-            const playlistPromises = playlistMetadataPage.items.map(
-              async ({ id }) =>
-                requestQueue.schedule(() =>
-                  sdk.playlists.getPlaylist(id, undefined, playlistFields)
-                )
-            );
-
-            const playlistsDetails = await Promise.all(playlistPromises);
-
-            return {
-              playlistMetadataPage,
-              playlistsDetails,
-            };
-          })
-      );
-    };
-
-    const playlistsPromise = scheduleGettingPlaylistsPage().then(
-      async ({ playlistMetadataPage }) => {
-        const { total, limit } = playlistMetadataPage;
-        let { items } = playlistMetadataPage;
-
-        let offset = limit;
-
-        let promises: PlaylistPagePromise[] = [];
-
-        while (offset < total) {
-          promises.push(scheduleGettingPlaylistsPage(offset));
-
-          offset += limit;
-        }
-
-        const responses = await Promise.all(promises);
-
-        items = responses.reduce(
-          (acc, { playlistMetadataPage: { items } }) => acc.concat(items),
-          items
-        );
-
-        return items;
-      }
-    );
-
-    // TODO: handle only a finite number of requests in the loader; handle the rest in the component with visible progress
     // TODO: search field
     // TODO: play button
     // TODO: use bottleneck library to avoid 429s
@@ -167,9 +108,9 @@ export const loader: LoaderFunction = async ({
     // TODO: use refresh token?
     // TODO: get track features (uniq set across all playlist tracks)
 
-    [profile, playlists, devices] = await Promise.all([
+    [profile, playlistPage, devices] = await Promise.all([
       profilePromise,
-      playlistsPromise,
+      playlistPagePromise,
       devicesPromise,
     ]);
   }
@@ -177,7 +118,7 @@ export const loader: LoaderFunction = async ({
   return {
     sdk,
     profile,
-    playlists,
+    playlistPage,
     devices,
   };
 };
@@ -189,7 +130,7 @@ function HomePage() {
     <>
       <ProfileInfo />
       <DevicesInput />
-      <PlaylistsMetadata />
+      <Playlists />
     </>
   ) : (
     <></>
@@ -264,35 +205,109 @@ const truncateString = (str?: string, num?: number) => {
   return str.length > num ? str.slice(0, num) + '...' : str;
 };
 
-const PlaylistsMetadata = () => {
-  const { playlists } = useLoaderData() as LoaderResponse;
+const Playlists = () => {
+  const { playlistPage: firstPlaylistPage, sdk } =
+    useLoaderData() as LoaderResponse;
 
-  const tableRows = playlists?.map(
-    ({ id, name, description, tracks }, index) => {
-      return (
-        <tr key={`playlist-${id}`}>
-          <td>{index + 1}</td>
-          <td>{name}</td>
-          <td>{truncateString(description, 50)}</td>
-          <td>{tracks?.total}</td>
-        </tr>
-      );
-    }
+  const { requestQueue, counts } = useBottleneck(SPOTIFY_BOTTLENECK_OPTIONS);
+
+  const loading =
+    !!counts?.RECEIVED ||
+    !!counts?.QUEUED ||
+    !!counts?.RUNNING ||
+    !!counts?.EXECUTING;
+
+  const [playlistsDetails, setPlaylistsDetails] = useState<{
+    [key: string]: Playlist<Track>;
+  }>();
+
+  const queueLoadPlaylistDetails = useCallback(
+    (playlistPage: Page<SimplifiedPlaylist>) => {
+      if (!!sdk && !!playlistPage?.items)
+        playlistPage.items.map(async ({ id }) =>
+          requestQueue
+            .schedule(() =>
+              sdk.playlists.getPlaylist(id, undefined, PLAYLIST_FIELDS)
+            )
+            .then((playlist) =>
+              setPlaylistsDetails((playlistsDetails) => ({
+                ...playlistsDetails,
+                [id]: playlist,
+              }))
+            )
+        );
+    },
+    [sdk, requestQueue]
   );
+
+  const queueLoadPlaylistPage = useCallback(
+    async (offset = 0) => {
+      return requestQueue.schedule(() =>
+        sdk!.currentUser.playlists
+          .playlists(undefined, offset)
+          .then(queueLoadPlaylistDetails)
+      );
+    },
+    [sdk, requestQueue, queueLoadPlaylistDetails]
+  );
+
+  useEffect(() => {
+    if (!firstPlaylistPage || !sdk) return;
+
+    queueLoadPlaylistDetails(firstPlaylistPage);
+
+    const { total, limit } = firstPlaylistPage;
+
+    let offset = limit;
+
+    while (offset < total) {
+      queueLoadPlaylistPage(offset);
+
+      offset += limit;
+    }
+  }, [sdk, firstPlaylistPage, queueLoadPlaylistDetails, queueLoadPlaylistPage]);
+
+  const numLoaded = Object.keys(playlistsDetails || {}).length;
+  const numTotal = firstPlaylistPage?.total || 0;
 
   return (
     <>
       <h1>Your Playlists</h1>
+      <ProgressBar
+        animated={loading}
+        now={numLoaded}
+        max={numTotal}
+        label={`${numLoaded} / ${numTotal}`}
+        variant="success"
+        // style={{ backgroundColor: SPOTIFY_GREEN }}
+      />
       <Table striped bordered hover>
         <thead>
           <tr>
             <th>#</th>
             <th>Name</th>
             <th>Description</th>
-            <th>Total Tracks</th>
+            <th>Tracks</th>
           </tr>
         </thead>
-        <tbody>{tableRows}</tbody>
+        <tbody>
+          {Object.values(playlistsDetails || {})?.map(
+            ({ id, name, description, tracks }, index) => {
+              const isMissingTracks = tracks.items.length < tracks.total;
+              return (
+                <tr key={`playlist-${id}`}>
+                  <td>{index + 1}</td>
+                  <td>{name}</td>
+                  <td>{truncateString(description, 50)}</td>
+                  <td className={isMissingTracks ? 'bg-danger' : ''}>
+                    {tracks.items.length}
+                    {isMissingTracks ? ` / ${tracks.total}` : ''}
+                  </td>
+                </tr>
+              );
+            }
+          )}
+        </tbody>
       </Table>
     </>
   );
