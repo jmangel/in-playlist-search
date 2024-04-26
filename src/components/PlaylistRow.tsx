@@ -39,13 +39,13 @@ const IndexTableRowWithLinkButton = ({
   className = '',
 }: IndexTableRowWithLinkButtonProps) => (
   <td>
-    <div className="d-flex">
+    <div className="d-flex justify-content-end">
       {index + 1}
       <Button
         variant="link"
         onClick={onClick}
         disabled={disabled}
-        className="lh-sm pt-0"
+        className="lh-sm p-0 ps-1"
       >
         <i className={`bi bi-${iconName} ${className}`} />
       </Button>
