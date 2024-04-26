@@ -13,13 +13,16 @@ const MODIFIED_URI_REGEX = new RegExp(
   DEFAULT_DOMPURIFY_URI_REGEX.flags
 );
 
-const trackMatches = (searchQuery: string, track: Track) =>
-  !!track &&
-  `${track.name} ${track.artists.map(({ name }) => name).join(' ')} ${
-    track.album.name
-  }`
-    .toLowerCase()
-    .includes(searchQuery);
+const trackMatches = (searchQuery: string, track: Track) => {
+  if (!track) return false;
+
+  const searchWords = searchQuery.split(' ');
+  const matchableString = `${track.name} ${track.artists
+    .map(({ name }) => name)
+    .join(' ')} ${track.album.name}`.toLowerCase();
+
+  return searchWords.every((word) => matchableString.includes(word));
+};
 
 type Props = {
   playlist: Playlist<Track>;
