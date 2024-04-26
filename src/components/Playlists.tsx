@@ -11,6 +11,7 @@ import {
 
 import { LoaderResponse as HomePageLoaderResponse } from '../pages/HomePage';
 import useBottleneck from '../hooks/useBottleneck';
+import PlaylistRow from './PlaylistRow';
 
 export const SPOTIFY_RATE_LIMIT_WINDOW_SECONDS = 30;
 const SPOTIFY_APPROXIMATE_REQUESTS_PER_WINDOW = 120; // internet says 90
@@ -29,18 +30,9 @@ const PLAYLIST_FIELDS = `name,owner(id,display_name),description,snapshot_id,tra
 
 // const SPOTIFY_GREEN = '#1DB954';
 
-const truncateString = (str?: string, num?: number) => {
-  if (!str) return '';
-  if (!num) return str;
-  return str.length > num ? str.slice(0, num) + '...' : str;
-};
-
 const Playlists = () => {
-  const {
-    playlistPage: firstPlaylistPage,
-    sdk,
-    profile,
-  } = useLoaderData() as HomePageLoaderResponse;
+  const { playlistPage: firstPlaylistPage, sdk } =
+    useLoaderData() as HomePageLoaderResponse;
 
   const { requestQueue, counts } = useBottleneck(SPOTIFY_BOTTLENECK_OPTIONS);
 
@@ -174,27 +166,9 @@ const Playlists = () => {
           </tr>
         </thead>
         <tbody>
-          {Object.values(playlistsDetails || {})?.map(
-            ({ id, name, description, tracks, owner }, index) => {
-              const isOwner = owner.id === profile?.id;
-              const isMissingTracks = tracks.items.length < tracks.total;
-
-              return (
-                <tr key={`playlist-${id}`}>
-                  <td>{index + 1}</td>
-                  <td>{name}</td>
-                  <td className={isOwner ? 'fw-bold' : ''}>
-                    {isOwner ? 'me' : owner.display_name}
-                  </td>
-                  <td>{truncateString(description, 50)}</td>
-                  <td className={isMissingTracks ? 'bg-danger' : ''}>
-                    {tracks.items.length}
-                    {isMissingTracks ? ` / ${tracks.total}` : ''}
-                  </td>
-                </tr>
-              );
-            }
-          )}
+          {Object.values(playlistsDetails || {})?.map((playlist, index) => (
+            <PlaylistRow key={playlist.id} playlist={playlist} index={index} />
+          ))}
         </tbody>
       </Table>
     </>
