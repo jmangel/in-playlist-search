@@ -65,7 +65,7 @@ const PlaylistRow = (props: Props) => {
     ? tracks.items.map(({ track }, index) =>
         includeNonMatchingTracks || trackMatches(searchQuery, track) ? (
           <tr key={track.id}>
-            <td>{index}</td>
+            <td>{index + 1}</td>
             <td>
               {/* <Button
                 onClick={() => playPlaylistTrack(track.uri, index)}
