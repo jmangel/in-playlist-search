@@ -7,10 +7,10 @@ import {
 } from 'react';
 import { LoaderFunction, useLoaderData } from 'react-router-dom';
 
-import { Col, Form, Row } from 'react-bootstrap';
+import { Button, Col, Form, Row } from 'react-bootstrap';
 import {
   AuthorizationCodeWithPKCEStrategy,
-  Devices,
+  Device,
   Page,
   PlaybackState,
   SimplifiedPlaylist,
@@ -37,7 +37,6 @@ export type LoaderResponse = {
   sdk?: SpotifyApi;
   profile?: UserProfile;
   playlistPage?: Page<SimplifiedPlaylist>;
-  devices?: Devices;
 };
 
 export const getSdk = async () => {
@@ -80,12 +79,11 @@ export const loader: LoaderFunction = async ({
 }): Promise<LoaderResponse> => {
   const sdk = await getSdk();
 
-  let profile, playlistPage, devices;
+  let profile, playlistPage;
 
   if (sdk) {
     const profilePromise = sdk.currentUser.profile();
     const playlistPagePromise = sdk.currentUser.playlists.playlists();
-    const devicesPromise = sdk.player.getAvailableDevices();
 
     // TODO: save/copy button
     // TODO: use bottleneck library to avoid 429s
@@ -98,10 +96,9 @@ export const loader: LoaderFunction = async ({
     // TODO: use refresh token?
     // TODO: get track features (uniq set across all playlist tracks)
 
-    [profile, playlistPage, devices] = await Promise.all([
+    [profile, playlistPage] = await Promise.all([
       profilePromise,
       playlistPagePromise,
-      devicesPromise,
     ]);
   }
 
@@ -109,7 +106,6 @@ export const loader: LoaderFunction = async ({
     sdk,
     profile,
     playlistPage,
-    devices,
   };
 };
 
@@ -178,7 +174,7 @@ function HomePage() {
         <Col xs="auto">
           <ProfileInfo />
         </Col>
-        <Col className="flex-grow-1" xs={6} sm={4}>
+        <Col className="flex-grow-1" xs={6} md={4}>
           <DevicesInput
             selectedDeviceId={selectedDeviceId}
             setSelectedDeviceId={setSelectedDeviceId}
@@ -220,14 +216,23 @@ type DevicesInputProps = {
 };
 const DevicesInput = (props: DevicesInputProps) => {
   const { selectedDeviceId, setSelectedDeviceId } = props;
+  const { sdk } = useLoaderData() as LoaderResponse;
 
-  const { devices } = useLoaderData() as LoaderResponse;
+  const [devices, setDevices] = useState([] as Device[]);
+
+  const loadDevices = useCallback(() => {
+    if (!sdk) return;
+
+    sdk.player.getAvailableDevices().then(({ devices }) => setDevices(devices));
+  }, [sdk]);
+
+  useEffect(loadDevices, [loadDevices]);
 
   useEffect(
     () =>
       setSelectedDeviceId(
         (selectedDeviceId) =>
-          devices?.devices?.find(({ is_active }) => is_active)?.id ||
+          devices?.find(({ is_active }) => is_active)?.id ||
           selectedDeviceId ||
           ''
       ),
@@ -244,7 +249,7 @@ const DevicesInput = (props: DevicesInputProps) => {
         onChange={(e) => setSelectedDeviceId(e.target.value)}
       >
         <option value=""></option>
-        {devices?.devices
+        {devices
           ?.filter(({ id }) => !!id)
           .map(({ name, id }) => (
             <option key={`device-${id}`} value={id!}>
@@ -252,9 +257,9 @@ const DevicesInput = (props: DevicesInputProps) => {
             </option>
           ))}
       </Form.Select>
-      {/* <Button onClick={loadDevices} className="flex-shrink-0">
+      <Button onClick={loadDevices} className="flex-shrink-0">
         Refresh devices
-      </Button> */}
+      </Button>
     </div>
   );
 };
