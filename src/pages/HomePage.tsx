@@ -80,7 +80,6 @@ export const loader: LoaderFunction = async ({
     const playlistPagePromise = sdk.currentUser.playlists.playlists();
     const devicesPromise = sdk.player.getAvailableDevices();
 
-    // TODO: search field
     // TODO: play button
     // TODO: use bottleneck library to avoid 429s
     // TODO: handle 429s (re-queue)
