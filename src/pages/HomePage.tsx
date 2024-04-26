@@ -115,7 +115,7 @@ function HomePage() {
         <Col xs="auto">
           <ProfileInfo />
         </Col>
-        <Col>
+        <Col className="flex-grow-1" xs={6} sm={4}>
           <DevicesInput />
         </Col>
       </Row>
