@@ -2,7 +2,7 @@ import { Playlist, Track } from '@spotify/web-api-ts-sdk';
 import { LoaderResponse as HomePageLoaderResponse } from '../pages/HomePage';
 import { useLoaderData } from 'react-router-dom';
 import { useState } from 'react';
-import { Col, Form, Row } from 'react-bootstrap';
+import { Form } from 'react-bootstrap';
 
 const truncateString = (str?: string, num?: number) => {
   if (!str) return '';
@@ -60,18 +60,37 @@ const PlaylistRow = (props: Props) => {
         </td>
       </tr>
       {showAllTracks && (
-        <Row>
-          <Col>
-            <ul>
-              {tracks.items.map((track) => (
-                <li key={track.track.id}>
-                  {track.track.artists.map((artist) => artist.name).join(', ')}{' '}
-                  - {track.track.name}
-                </li>
-              ))}
-            </ul>
-          </Col>
-        </Row>
+        <>
+          <tr>
+            <th colSpan={6}>Tracks</th>
+          </tr>
+          <tr>
+            <th>#</th>
+            {/* <th></th> */}
+            <th colSpan={2}>Artist</th>
+            <th colSpan={1}>Track</th>
+            <th colSpan={1}>Album</th>
+          </tr>
+
+          {tracks.items.map((track, index) => (
+            <tr key={track.track.id}>
+              <td>{index}</td>
+              {/* <td>
+                <Button
+                  onClick={() => playPlaylistTrack(track.track.uri, index)}
+                  color="primary"
+                >
+                  ►
+                </Button>
+              </td> */}
+              <td colSpan={2}>
+                {track.track.artists.map((artist) => artist.name).join(', ')}
+              </td>
+              <td colSpan={1}>{track.track.name}</td>
+              <td colSpan={1}>{track.track.album.name}</td>
+            </tr>
+          ))}
+        </>
       )}
     </>
   );
