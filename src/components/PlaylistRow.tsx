@@ -74,10 +74,10 @@ const PlaylistRow = (props: Props) => {
                 ►
               </Button> */}
             </td>
+            <td colSpan={1}>{track.name}</td>
             <td colSpan={2}>
               {track.artists.map((artist) => artist.name).join(', ')}
             </td>
-            <td colSpan={1}>{track.name}</td>
             <td colSpan={1}>{track.album.name}</td>
           </tr>
         ) : (
@@ -142,8 +142,8 @@ const PlaylistRow = (props: Props) => {
           <tr>
             <th>#</th>
             <th></th>
-            <th colSpan={2}>Artist</th>
             <th colSpan={1}>Track</th>
+            <th colSpan={2}>Artist</th>
             <th colSpan={1}>Album</th>
           </tr>
 
