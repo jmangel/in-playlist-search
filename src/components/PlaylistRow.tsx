@@ -4,12 +4,6 @@ import { useLoaderData } from 'react-router-dom';
 import { useMemo, useState } from 'react';
 import { Form } from 'react-bootstrap';
 
-const truncateString = (str?: string, num?: number) => {
-  if (!str) return '';
-  if (!num) return str;
-  return str.length > num ? str.slice(0, num) + '...' : str;
-};
-
 const trackMatches = (searchQuery: string, track: Track) =>
   !!track &&
   `${track.name} ${track.artists.map(({ name }) => name).join(' ')} ${
@@ -108,7 +102,7 @@ const PlaylistRow = (props: Props) => {
         <td className={isOwner ? 'fw-bold' : ''}>
           {isOwner ? 'me' : owner.display_name}
         </td>
-        <td>{truncateString(description, 50)}</td>
+        <td dangerouslySetInnerHTML={{ __html: description }}></td>
         <td className={hasMissingOrExtraTracks ? 'bg-danger' : ''}>
           {tracks.items.length}
           {hasMissingOrExtraTracks ? ` / ${tracks.total}` : ''}
