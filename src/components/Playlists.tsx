@@ -160,7 +160,7 @@ const Playlists = () => {
             type="text"
             placeholder="Search"
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => setSearchQuery(e.target.value.toLowerCase())}
           />
         </Col>
       </Row>
