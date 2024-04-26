@@ -80,6 +80,7 @@ export const loader: LoaderFunction = async ({
     const playlistPagePromise = sdk.currentUser.playlists.playlists();
     const devicesPromise = sdk.player.getAvailableDevices();
 
+    // TODO: load rest of paginated tracks for long playlists
     // TODO: search field
     // TODO: play button
     // TODO: use bottleneck library to avoid 429s
