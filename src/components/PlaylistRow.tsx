@@ -3,6 +3,15 @@ import { LoaderResponse as HomePageLoaderResponse } from '../pages/HomePage';
 import { useLoaderData } from 'react-router-dom';
 import { useMemo, useState } from 'react';
 import { Form } from 'react-bootstrap';
+import * as DOMPurify from 'dompurify';
+
+const DEFAULT_DOMPURIFY_URI_REGEX =
+  /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|sms|cid|xmpp):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i;
+
+const MODIFIED_URI_REGEX = new RegExp(
+  DEFAULT_DOMPURIFY_URI_REGEX.source.replace('tel|', 'tel|spotify|'),
+  DEFAULT_DOMPURIFY_URI_REGEX.flags
+);
 
 const trackMatches = (searchQuery: string, track: Track) =>
   !!track &&
@@ -102,7 +111,14 @@ const PlaylistRow = (props: Props) => {
         <td className={isOwner ? 'fw-bold' : ''}>
           {isOwner ? 'me' : owner.display_name}
         </td>
-        <td dangerouslySetInnerHTML={{ __html: description }}></td>
+        <td
+          dangerouslySetInnerHTML={{
+            __html: DOMPurify.sanitize(description, {
+              USE_PROFILES: { html: true },
+              ALLOWED_URI_REGEXP: MODIFIED_URI_REGEX,
+            }),
+          }}
+        ></td>
         <td className={hasMissingOrExtraTracks ? 'bg-danger' : ''}>
           {tracks.items.length}
           {hasMissingOrExtraTracks ? ` / ${tracks.total}` : ''}
