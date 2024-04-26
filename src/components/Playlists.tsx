@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useLoaderData } from 'react-router-dom';
 
-import { ProgressBar, Table } from 'react-bootstrap';
+import { Col, Form, ProgressBar, Row, Table } from 'react-bootstrap';
 import {
   Page,
   Playlist,
@@ -33,6 +33,8 @@ const PLAYLIST_FIELDS = `name,owner(id,display_name),description,snapshot_id,tra
 const Playlists = () => {
   const { playlistPage: firstPlaylistPage, sdk } =
     useLoaderData() as HomePageLoaderResponse;
+
+  const [searchQuery, setSearchQuery] = useState('');
 
   const { requestQueue, counts } = useBottleneck(SPOTIFY_BOTTLENECK_OPTIONS);
 
@@ -149,7 +151,19 @@ const Playlists = () => {
 
   return (
     <>
-      <h1>Your Playlists</h1>
+      <Row className="d-flex justify-content-start mb-2 align-items-center">
+        <Col xs="auto">
+          <h1>Your Playlists</h1>
+        </Col>
+        <Col>
+          <Form.Control
+            type="text"
+            placeholder="Search"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </Col>
+      </Row>
       <ProgressBar
         animated={loading}
         now={numLoaded}
