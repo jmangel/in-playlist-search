@@ -2,7 +2,7 @@ import { Playlist, Track } from '@spotify/web-api-ts-sdk';
 import { LoaderResponse as HomePageLoaderResponse } from '../pages/HomePage';
 import { useLoaderData } from 'react-router-dom';
 import { useMemo, useState } from 'react';
-import { Form } from 'react-bootstrap';
+import { Button, Form } from 'react-bootstrap';
 import * as DOMPurify from 'dompurify';
 
 const DEFAULT_DOMPURIFY_URI_REGEX =
@@ -66,14 +66,14 @@ const PlaylistRow = (props: Props) => {
         includeNonMatchingTracks || trackMatches(searchQuery, track) ? (
           <tr key={track.id}>
             <td>{index + 1}</td>
-            <td>
-              {/* <Button
+            {/* <td>
+              <Button
                 onClick={() => playPlaylistTrack(track.uri, index)}
                 color="primary"
               >
                 ►
-              </Button> */}
-            </td>
+              </Button>
+            </td> */}
             <td colSpan={1}>{track.name}</td>
             <td colSpan={2}>
               {track.artists.map((artist) => artist.name).join(', ')}
@@ -89,15 +89,19 @@ const PlaylistRow = (props: Props) => {
   return (
     <>
       <tr key={`playlist-${id}`}>
-        <td>{index + 1}</td>
         <td>
-          <Form.Check
-            type="switch"
-            id="show-tracks"
-            label="Show Tracks"
-            checked={showTracks}
-            onChange={(e) => setShowTracks(e.target.checked)}
-          />
+          <div className="d-flex">
+            {index + 1}
+            <Button
+              variant="link"
+              onClick={() => setShowTracks((prev) => !prev)}
+              className="lh-sm pt-0"
+            >
+              <i
+                className={`bi bi-arrows-${showTracks ? 'collapse' : 'expand'}`}
+              />
+            </Button>
+          </div>
         </td>
         <td>
           <a target="_blank" href={href} rel="noreferrer">
@@ -141,7 +145,6 @@ const PlaylistRow = (props: Props) => {
           </tr>
           <tr>
             <th>#</th>
-            <th></th>
             <th colSpan={1}>Track</th>
             <th colSpan={2}>Artist</th>
             <th colSpan={1}>Album</th>
