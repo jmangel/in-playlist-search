@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { LoaderFunction, useLoaderData } from 'react-router-dom';
 
-import { Form } from 'react-bootstrap';
+import { Col, Form, Row } from 'react-bootstrap';
 import {
   AuthorizationCodeWithPKCEStrategy,
   Devices,
@@ -112,8 +112,14 @@ function HomePage() {
 
   return sdk ? (
     <>
-      <ProfileInfo />
-      <DevicesInput />
+      <Row className="align-items-center">
+        <Col xs="auto">
+          <ProfileInfo />
+        </Col>
+        <Col>
+          <DevicesInput />
+        </Col>
+      </Row>
       <Playlists />
     </>
   ) : (
@@ -159,8 +165,8 @@ const DevicesInput = () => {
   );
 
   return (
-    <div className="d-flex">
-      <Form.Label className="flex-shrink-0 pr-1">Playing on</Form.Label>
+    <div className="d-flex align-items-center">
+      <Form.Label className="flex-shrink-0 pr-1 mb-0">Playing on</Form.Label>
       <Form.Select
         className="flex-grow-1 mx-2"
         name="select"
