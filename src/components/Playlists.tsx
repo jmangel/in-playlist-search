@@ -195,7 +195,7 @@ const Playlists = (props: Props) => {
           // style={{ backgroundColor: SPOTIFY_GREEN }}
         />
       </ProgressBar>
-      <Table striped bordered hover>
+      <Table striped bordered hover responsive>
         <thead>
           <tr>
             <th>#</th>
