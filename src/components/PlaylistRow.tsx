@@ -4,6 +4,7 @@ import { useLoaderData } from 'react-router-dom';
 import { MouseEventHandler, useMemo, useState } from 'react';
 import { Button, Form } from 'react-bootstrap';
 import * as DOMPurify from 'dompurify';
+import { SPOTIFY_GREEN } from './Playlists';
 
 const DEFAULT_DOMPURIFY_URI_REGEX =
   /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|sms|cid|xmpp):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i;
@@ -130,7 +131,10 @@ const PlaylistRow = (props: Props) => {
             <strong>{name}</strong>
           </a>
         </td>
-        <td className={isOwner ? 'fw-bold' : ''}>
+        <td
+          className={isOwner ? 'fw-bold' : ''}
+          style={owner.id === 'spotify' ? { color: SPOTIFY_GREEN } : {}}
+        >
           {isOwner ? 'me' : owner.display_name}
         </td>
         <td

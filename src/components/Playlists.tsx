@@ -13,6 +13,8 @@ import { LoaderResponse as HomePageLoaderResponse } from '../pages/HomePage';
 import useBottleneck from '../hooks/useBottleneck';
 import PlaylistRow from './PlaylistRow';
 
+export const SPOTIFY_GREEN = '#1DB954';
+
 export const SPOTIFY_RATE_LIMIT_WINDOW_SECONDS = 30;
 const SPOTIFY_APPROXIMATE_REQUESTS_PER_WINDOW = 120; // internet says 90
 const SPOTIFY_BOTTLENECK_OPTIONS = {
@@ -27,8 +29,6 @@ const SPOTIFY_BOTTLENECK_OPTIONS = {
 const PLAYLIST_ITEMS_FIELDS = 'track(id,name,uri,album(name)))';
 const PLAYLIST_TRACKS_FIELDS = `offset,limit,items(track(artists.name),${PLAYLIST_ITEMS_FIELDS}`;
 const PLAYLIST_FIELDS = `name,owner(id,display_name),description,snapshot_id,tracks(total,offset,limit),tracks.items(track(artists.name),${PLAYLIST_ITEMS_FIELDS}`;
-
-// const SPOTIFY_GREEN = '#1DB954';
 
 type Props = {
   playPlaylistTrack: (
