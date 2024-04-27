@@ -212,7 +212,7 @@ const Playlists = (props: Props) => {
 
   return (
     <>
-      <Row className="w-100 d-flex justify-content-start mb-2 align-items-center">
+      <Row className="d-flex justify-content-start mb-2 align-items-center">
         <Col xs="auto">
           <h1>Your Playlists</h1>
         </Col>
