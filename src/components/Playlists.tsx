@@ -36,14 +36,14 @@ const createProgressLabel = (
   numLoaded: number,
   numTotal: number
 ) => {
-  let progressLabel = `${numLoaded} / ${numTotal}`;
+  let numeratorString = `${numLoaded}`;
+  const denominatorString = `${numTotal}`;
 
-  if (numLoaded > numFullyLoaded)
-    progressLabel = `${numFullyLoaded} + ${
-      numLoaded - numFullyLoaded
-    } partially loaded = ${progressLabel}`;
+  let numPartiallyLoaded = numLoaded - numFullyLoaded;
+  if (numPartiallyLoaded > 0)
+    numeratorString += ` (${numPartiallyLoaded} partial)`;
 
-  return progressLabel;
+  return `${numeratorString} / ${denominatorString}`;
 };
 
 type Props = {
