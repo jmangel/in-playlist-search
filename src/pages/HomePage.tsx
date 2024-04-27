@@ -170,7 +170,7 @@ function HomePage() {
 
   return sdk ? (
     <>
-      <Row className="align-items-center mb-1">
+      <Row className="w-100 align-items-center mb-1">
         <Col xs="auto">
           <ProfileInfo />
         </Col>
