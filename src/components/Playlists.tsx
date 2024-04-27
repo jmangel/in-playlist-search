@@ -26,6 +26,12 @@ const SPOTIFY_BOTTLENECK_OPTIONS = {
   trackDoneStatus: true,
 };
 
+// a lower priority value is better, ie. will be run sooner
+const REQUEST_QUEUE_PRIORITIES = {
+  default: 5,
+  extraPlaylistTracks: 4,
+};
+
 const PLAYLIST_ITEMS_FIELDS = 'track(id,name,uri,album(name)))';
 const PLAYLIST_TRACKS_FIELDS = `offset,limit,items(track(artists.name),${PLAYLIST_ITEMS_FIELDS}`;
 const PLAYLIST_FIELDS = `name,owner(id,display_name),description,snapshot_id,tracks(total,offset,limit),tracks.items(track(artists.name),${PLAYLIST_ITEMS_FIELDS}`;
@@ -79,33 +85,35 @@ const Playlists = (props: Props) => {
 
   const queueLoadTracksPage = useCallback(
     async (playlistId: string, offset = 0) => {
-      return requestQueue.schedule(() =>
-        sdk!.playlists
-          .getPlaylistItems(
-            playlistId,
-            undefined,
-            PLAYLIST_TRACKS_FIELDS,
-            undefined,
-            offset
-          )
-          .then((tracksPage) => {
-            setPlaylistsDetails((playlistsDetails) => {
-              const playlist = playlistsDetails?.[playlistId];
-              if (!playlist)
-                throw new Error(
-                  'Loaded offset page of playlist tracks, but playlist not found in playlistsDetails'
-                );
+      return requestQueue.schedule(
+        { priority: REQUEST_QUEUE_PRIORITIES.extraPlaylistTracks },
+        () =>
+          sdk!.playlists
+            .getPlaylistItems(
+              playlistId,
+              undefined,
+              PLAYLIST_TRACKS_FIELDS,
+              undefined,
+              offset
+            )
+            .then((tracksPage) => {
+              setPlaylistsDetails((playlistsDetails) => {
+                const playlist = playlistsDetails?.[playlistId];
+                if (!playlist)
+                  throw new Error(
+                    'Loaded offset page of playlist tracks, but playlist not found in playlistsDetails'
+                  );
 
-              tracksPage.items.forEach((track, index) => {
-                playlist.tracks.items[offset + index] = track;
+                tracksPage.items.forEach((track, index) => {
+                  playlist.tracks.items[offset + index] = track;
+                });
+
+                return {
+                  ...playlistsDetails,
+                  [playlistId]: playlist,
+                };
               });
-
-              return {
-                ...playlistsDetails,
-                [playlistId]: playlist,
-              };
-            });
-          })
+            })
       );
     },
     [sdk, requestQueue]
