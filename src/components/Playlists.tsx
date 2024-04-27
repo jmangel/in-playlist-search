@@ -30,6 +30,22 @@ const PLAYLIST_ITEMS_FIELDS = 'track(id,name,uri,album(name)))';
 const PLAYLIST_TRACKS_FIELDS = `offset,limit,items(track(artists.name),${PLAYLIST_ITEMS_FIELDS}`;
 const PLAYLIST_FIELDS = `name,owner(id,display_name),description,snapshot_id,tracks(total,offset,limit),tracks.items(track(artists.name),${PLAYLIST_ITEMS_FIELDS}`;
 
+const APPROXIMATE_PIXELS_PER_LABEL_CHARACTER = 6;
+const createProgressLabel = (
+  numFullyLoaded: number,
+  numLoaded: number,
+  numTotal: number
+) => {
+  let progressLabel = `${numLoaded} / ${numTotal}`;
+
+  if (numLoaded > numFullyLoaded)
+    progressLabel = `${numFullyLoaded} + ${
+      numLoaded - numFullyLoaded
+    } partially loaded = ${progressLabel}`;
+
+  return progressLabel;
+};
+
 type Props = {
   playPlaylistTrack: (
     playlistUri: string,
@@ -158,7 +174,6 @@ const Playlists = (props: Props) => {
     }
   }, [sdk, firstPlaylistPage, handleNewPlaylistPage, queueLoadPlaylistsPage]);
 
-  const numLoaded = Object.keys(playlistsDetails || {}).length;
   const numTotal = useMemo(
     () =>
       allPlaylistPagesLoaded
@@ -168,6 +183,24 @@ const Playlists = (props: Props) => {
         : firstPlaylistPage?.total || 0,
     [allPlaylistPagesLoaded, playlistsPages, firstPlaylistPage]
   );
+
+  const numLoaded = Object.keys(playlistsDetails || {}).length;
+  const numFullyLoaded = useMemo(
+    () =>
+      Object.values(playlistsDetails || {}).filter(
+        ({ tracks }) => tracks.items.length === tracks.total
+      ).length,
+    [playlistsDetails]
+  );
+
+  const progressLabelMinWidth = useMemo(() => {
+    const maxPossibleCharacters = createProgressLabel(
+      numTotal - 1,
+      numTotal,
+      numTotal
+    ).length;
+    return maxPossibleCharacters * APPROXIMATE_PIXELS_PER_LABEL_CHARACTER;
+  }, [numTotal]);
 
   return (
     <>
@@ -187,11 +220,11 @@ const Playlists = (props: Props) => {
       <ProgressBar>
         <ProgressBar
           animated={loading}
-          now={numLoaded}
+          now={numFullyLoaded}
           max={numTotal}
-          label={`${numLoaded} / ${numTotal}`}
+          label={createProgressLabel(numFullyLoaded, numLoaded, numTotal)}
           variant="success"
-          style={{ minWidth: 70 }}
+          style={{ minWidth: progressLabelMinWidth }}
           // style={{ backgroundColor: SPOTIFY_GREEN }}
         />
       </ProgressBar>
