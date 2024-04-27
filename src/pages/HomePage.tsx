@@ -170,7 +170,7 @@ function HomePage() {
 
   return sdk ? (
     <>
-      <Row className="align-items-center">
+      <Row className="align-items-center mb-1">
         <Col xs="auto">
           <ProfileInfo />
         </Col>
@@ -195,7 +195,7 @@ const ProfileInfo = () => {
     profile || {};
 
   return name ? (
-    <h1>
+    <h1 className="mb-0">
       Logged in as{' '}
       {url ? (
         <a target="_blank" href={url} rel="noreferrer">
