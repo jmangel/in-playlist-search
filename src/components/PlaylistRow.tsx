@@ -101,30 +101,37 @@ const PlaylistRow = (props: Props) => {
   let queuePreviewIndex = -1;
   const trackRows = showTracks
     ? tracks.items.map(({ track }, index) => {
-        let queuePreview = false;
+        const isMatching = trackMatches(searchQuery, track);
 
-        if (!includeNonMatchingTracks) {
-          if (trackMatches(searchQuery, track))
-            queuePreviewIndex = index + QUEUE_PREVIEW_LENGTH;
-          else if (queuePreviewIndex >= index) queuePreview = true;
-          else return <></>;
-        }
+        if (isMatching) queuePreviewIndex = index + QUEUE_PREVIEW_LENGTH;
 
-        return (
-          <tr key={track.id} className={queuePreview ? 'small fst-italic' : ''}>
-            <IndexTableRowWithLinkButton
-              index={index}
-              iconName="play-circle-fill"
-              className="text-success"
-              onClick={() => playPlaylistTrack(playlist.uri, track.uri, index)}
-            />
-            <td colSpan={1}>{track.name}</td>
-            <td colSpan={2}>
-              {track.artists.map((artist) => artist.name).join(', ')}
-            </td>
-            <td colSpan={1}>{track.album.name}</td>
-          </tr>
-        );
+        if (
+          isMatching ||
+          queuePreviewIndex >= index ||
+          includeNonMatchingTracks
+        )
+          return (
+            <tr
+              key={track.id}
+              className={!isMatching ? 'small fst-italic' : ''}
+            >
+              <IndexTableRowWithLinkButton
+                index={index}
+                iconName="play-circle-fill"
+                className="text-success"
+                onClick={() =>
+                  playPlaylistTrack(playlist.uri, track.uri, index)
+                }
+              />
+              <td colSpan={1}>{track.name}</td>
+              <td colSpan={2}>
+                {track.artists.map((artist) => artist.name).join(', ')}
+              </td>
+              <td colSpan={1}>{track.album.name}</td>
+            </tr>
+          );
+
+        return <></>;
       })
     : [];
 
