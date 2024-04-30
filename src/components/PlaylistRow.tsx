@@ -14,6 +14,8 @@ const MODIFIED_URI_REGEX = new RegExp(
   DEFAULT_DOMPURIFY_URI_REGEX.flags
 );
 
+const QUEUE_PREVIEW_LENGTH = 5;
+
 const trackMatches = (searchQuery: string, track: Track) => {
   if (!track) return false;
 
@@ -96,10 +98,20 @@ const PlaylistRow = (props: Props) => {
 
   if (!matchesSearchTerm) return null;
 
+  let queuePreviewIndex = -1;
   const trackRows = showTracks
-    ? tracks.items.map(({ track }, index) =>
-        includeNonMatchingTracks || trackMatches(searchQuery, track) ? (
-          <tr key={track.id}>
+    ? tracks.items.map(({ track }, index) => {
+        let queuePreview = false;
+
+        if (!includeNonMatchingTracks) {
+          if (trackMatches(searchQuery, track))
+            queuePreviewIndex = index + QUEUE_PREVIEW_LENGTH;
+          else if (queuePreviewIndex >= index) queuePreview = true;
+          else return <></>;
+        }
+
+        return (
+          <tr key={track.id} className={queuePreview ? 'small fst-italic' : ''}>
             <IndexTableRowWithLinkButton
               index={index}
               iconName="play-circle-fill"
@@ -112,10 +124,8 @@ const PlaylistRow = (props: Props) => {
             </td>
             <td colSpan={1}>{track.album.name}</td>
           </tr>
-        ) : (
-          <></>
-        )
-      )
+        );
+      })
     : [];
 
   return (
