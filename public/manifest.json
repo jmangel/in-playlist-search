@@ -1,6 +1,6 @@
 {
-  "short_name": "React App",
-  "name": "Create React App Sample",
+  "short_name": "In-Playlist Search",
+  "name": "In-Playlist Search for Spotify",
   "icons": [
     {
       "src": "favicon.ico",
