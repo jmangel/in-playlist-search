@@ -219,7 +219,7 @@ const Playlists = (props: Props) => {
         <Col>
           <Form.Control
             type="text"
-            placeholder="Search"
+            placeholder="Search by song, artist, album, or playlist name or description"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value.toLowerCase())}
           />
