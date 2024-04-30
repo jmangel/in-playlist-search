@@ -118,6 +118,8 @@ function HomePage() {
     (playlistUri: string, songUri: string, offsetPosition: number) => {
       if (!sdk) return;
 
+      if (window.navigator.vibrate) window.navigator.vibrate(20);
+
       const playWithOffsetOptions = (offsetOptions: object) =>
         sdk.player.startResumePlayback(
           selectedDeviceId,
