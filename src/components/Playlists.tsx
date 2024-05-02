@@ -4,14 +4,18 @@ import { useLoaderData } from 'react-router-dom';
 import { Col, Form, ProgressBar, Row, Table } from 'react-bootstrap';
 import {
   Page,
-  Playlist,
+  PlaylistedTrack,
   SimplifiedPlaylist,
-  Track,
+  Track as SpotifyTrack,
 } from '@spotify/web-api-ts-sdk';
 
-import { LoaderResponse as HomePageLoaderResponse } from '../pages/HomePage';
+import {
+  LoaderResponse as HomePageLoaderResponse,
+  Snapshot,
+} from '../pages/HomePage';
 import useBottleneck from '../hooks/useBottleneck';
 import PlaylistRow from './PlaylistRow';
+import { playlistDatabase } from '../db';
 
 export const SPOTIFY_GREEN = '#1DB954';
 
@@ -33,8 +37,8 @@ const REQUEST_QUEUE_PRIORITIES = {
 };
 
 const PLAYLIST_ITEMS_FIELDS = 'track(id,name,uri,album(name)))';
-const PLAYLIST_TRACKS_FIELDS = `offset,limit,items(track(artists.name),${PLAYLIST_ITEMS_FIELDS}`;
-const PLAYLIST_FIELDS = `name,owner(id,display_name),description,snapshot_id,tracks(total,offset,limit),tracks.items(track(artists.name),${PLAYLIST_ITEMS_FIELDS}`;
+const PLAYLIST_TRACKS_FIELDS = `offset,limit,items(track(artists(id,name)),${PLAYLIST_ITEMS_FIELDS}`;
+const PLAYLIST_FIELDS = `name,owner(id,display_name),description,snapshot_id,tracks(total,offset,limit),tracks.items(track(artists(id,name)),${PLAYLIST_ITEMS_FIELDS}`;
 
 const APPROXIMATE_PIXELS_PER_LABEL_CHARACTER = 6;
 const createProgressLabel = (
@@ -52,15 +56,46 @@ const createProgressLabel = (
   return `${numeratorString} / ${denominatorString}`;
 };
 
+const putTrackPageInDb = async (
+  snapshotId: string,
+  offset: number,
+  items: PlaylistedTrack<SpotifyTrack>[]
+) => {
+  await playlistDatabase.artists.bulkPut(
+    items.flatMap(({ track: { artists } }) =>
+      artists.filter(({ id }) => !!id).map(({ id, name }) => ({ id, name }))
+    )
+  );
+  const presentItems = items.filter(({ track }) => !!track.id);
+  await playlistDatabase.tracks.bulkPut(
+    presentItems.map(({ track: { id, name, album, artists, uri } }) => ({
+      id: id,
+      name: name,
+      albumName: album.name,
+      artistIds: artists.map(({ id }) => id),
+      uri: uri,
+    }))
+  );
+  const updateObject = presentItems.reduce(
+    (acc, { track: { id } }, index) => ({
+      ...acc,
+      [`trackIds.${offset + index}`]: id,
+    }),
+    {}
+  );
+  await playlistDatabase.playlistSnapshots.update(snapshotId, updateObject);
+};
+
 type Props = {
   playPlaylistTrack: (
     playlistUri: string,
     songUri: string,
     offsetPosition: number
   ) => void;
+  rememberedSnapshots: Snapshot[];
 };
 const Playlists = (props: Props) => {
-  const { playPlaylistTrack } = props;
+  const { playPlaylistTrack, rememberedSnapshots } = props;
   const { playlistPage: firstPlaylistPage, sdk } =
     useLoaderData() as HomePageLoaderResponse;
 
@@ -80,7 +115,7 @@ const Playlists = (props: Props) => {
   const [allPlaylistPagesLoaded, setAllPlaylistPagesLoaded] = useState(false);
 
   const [playlistsDetails, setPlaylistsDetails] = useState<{
-    [key: string]: Playlist<Track>;
+    [playlistId: string]: Snapshot;
   }>();
 
   const queueLoadTracksPage = useCallback(
@@ -104,9 +139,20 @@ const Playlists = (props: Props) => {
                     'Loaded offset page of playlist tracks, but playlist not found in playlistsDetails'
                   );
 
-                tracksPage.items.forEach((track, index) => {
-                  playlist.tracks.items[offset + index] = track;
-                });
+                tracksPage.items.forEach(
+                  ({ track: { id, name, album, artists, uri } }, index) => {
+                    playlist.tracks[offset + index] = {
+                      id,
+                      name,
+                      albumName: album.name,
+                      artists,
+                      artistIds: artists.map(({ id }) => id),
+                      uri,
+                    };
+                  }
+                );
+
+                putTrackPageInDb(playlist.id, offset, tracksPage.items);
 
                 return {
                   ...playlistsDetails,
@@ -125,34 +171,90 @@ const Playlists = (props: Props) => {
       if (!playlistPage.next) setAllPlaylistPagesLoaded(true);
 
       if (!!sdk && !!playlistPage?.items)
-        playlistPage.items.map(async ({ id, external_urls, uri }) =>
-          requestQueue
-            .schedule(() =>
-              sdk.playlists.getPlaylist(id, undefined, PLAYLIST_FIELDS)
-            )
-            .then((playlist) => {
-              playlist.id = id;
-              playlist.external_urls = external_urls;
-              playlist.uri = uri;
-
+        playlistPage.items.forEach(
+          ({ id, external_urls, uri, snapshot_id }) => {
+            const rememberedSnapshot = rememberedSnapshots.find(
+              ({ playlistId, id: snapshotId }) =>
+                playlistId === id && snapshotId === snapshot_id
+            );
+            if (rememberedSnapshot) {
               setPlaylistsDetails((playlistsDetails) => ({
                 ...playlistsDetails,
-                [id]: playlist,
+                [id]: rememberedSnapshot,
               }));
 
-              const { limit, total } = playlist.tracks;
+              return;
+            }
 
-              let offset = limit;
+            return requestQueue
+              .schedule(() =>
+                sdk.playlists.getPlaylist(id, undefined, PLAYLIST_FIELDS)
+              )
+              .then((playlist) => {
+                playlist.id = id;
+                playlist.external_urls = external_urls;
+                playlist.uri = uri;
 
-              while (offset < total) {
-                queueLoadTracksPage(id, offset);
+                const snapshot = {
+                  playlistId: id,
+                  id: snapshot_id,
+                  name: playlist.name,
+                  description: playlist.description,
+                  rememberedAt: new Date(),
+                  totalTracks: playlist.tracks.total,
+                  trackIds: [],
+                  uri,
+                  spotifyUrl: external_urls.spotify,
+                  owner: playlist.owner,
+                  tracks: playlist.tracks.items.map(
+                    ({ track: { id, name, album, artists, uri } }) => ({
+                      id,
+                      name,
+                      albumName: album.name,
+                      artistIds: artists.map(({ id }) => id),
+                      artists,
+                      uri,
+                    })
+                  ),
+                } as Snapshot;
 
-                offset += limit;
-              }
-            })
+                setPlaylistsDetails((playlistsDetails) => ({
+                  ...playlistsDetails,
+                  [id]: snapshot,
+                }));
+
+                const { limit, total, items } = playlist.tracks;
+
+                playlistDatabase.playlists.put({
+                  id,
+                  owner: playlist.owner,
+                  uri,
+                  spotifyUrl: external_urls.spotify,
+                });
+                playlistDatabase.playlistSnapshots.put({
+                  playlistId: id,
+                  id: snapshot_id,
+                  name: playlist.name,
+                  description: playlist.description,
+                  rememberedAt: new Date(),
+                  totalTracks: total,
+                  trackIds: [],
+                });
+
+                putTrackPageInDb(snapshot_id, 0, items);
+
+                let offset = limit;
+
+                while (offset < total) {
+                  queueLoadTracksPage(id, offset);
+
+                  offset += limit;
+                }
+              });
+          }
         );
     },
-    [sdk, requestQueue, queueLoadTracksPage]
+    [sdk, requestQueue, rememberedSnapshots, queueLoadTracksPage]
   );
 
   const queueLoadPlaylistsPage = useCallback(
@@ -196,7 +298,7 @@ const Playlists = (props: Props) => {
   const numFullyLoaded = useMemo(
     () =>
       Object.values(playlistsDetails || {}).filter(
-        ({ tracks }) => tracks.items.length === tracks.total
+        ({ tracks, totalTracks }) => tracks.length === totalTracks
       ).length,
     [playlistsDetails]
   );

@@ -19,6 +19,7 @@ import {
 } from '@spotify/web-api-ts-sdk';
 
 import Playlists from '../components/Playlists';
+import { Artist, playlistDatabase } from '../db';
 
 const clientId = process.env.REACT_APP_CLIENT_ID || '';
 const redirectUrl = `${process.env.REACT_APP_HOST_URI}/callback`;
@@ -33,10 +34,36 @@ const scopes = [
   'user-modify-playback-state',
 ];
 
+export type Track = {
+  artists: Artist[];
+  id: string;
+  name: string;
+  albumName: string;
+  artistIds: string[];
+  uri: string;
+};
+export type Snapshot = {
+  owner: {
+    id: string;
+    display_name: string;
+  };
+  tracks: Track[];
+  id: string;
+  playlistId: string;
+  name: string;
+  description: string;
+  rememberedAt: Date;
+  totalTracks: number;
+  trackIds: string[];
+  uri: string;
+  spotifyUrl: string;
+};
+
 export type LoaderResponse = {
   sdk?: SpotifyApi;
   profile?: UserProfile;
   playlistPage?: Page<SimplifiedPlaylist>;
+  rememberedSnapshots: Snapshot[];
 };
 
 export const getSdk = async () => {
@@ -80,10 +107,59 @@ export const loader: LoaderFunction = async ({
   const sdk = await getSdk();
 
   let profile, playlistPage;
+  let rememberedSnapshots = [] as Snapshot[];
 
   if (sdk) {
     const profilePromise = sdk.currentUser.profile();
     const playlistPagePromise = sdk.currentUser.playlists.playlists();
+
+    const [playlists, snapshots, allTracks, allArtists] = await Promise.all([
+      playlistDatabase.playlists.toArray(),
+      playlistDatabase.playlistSnapshots.toArray(),
+      playlistDatabase.tracks.toArray(),
+      playlistDatabase.artists.toArray(),
+    ]);
+
+    rememberedSnapshots = snapshots
+      .map((snapshot) => {
+        const playlist = playlists.find(({ id }) => id === snapshot.playlistId);
+
+        // skip snapshot if playlist info or any track ids are missing
+        // TODO: allow partial remembered playlists, and load the missing pages from spotify if needed
+        if (
+          !playlist ||
+          snapshot.trackIds.length < snapshot.totalTracks ||
+          snapshot.trackIds.some((trackId) => !trackId)
+        )
+          return null;
+
+        const tracks = [];
+        // use a for loop instead of forEach here to allow early return from the outer `.map` function
+        for (const trackId of snapshot.trackIds) {
+          const track = allTracks.find(({ id }) => id === trackId);
+          const artists = (track?.artistIds
+            ?.map((artistId) => allArtists.find(({ id }) => id === artistId))
+            ?.filter(Boolean) || []) as Artist[];
+
+          // for now, throw away any snapshots with missing tracks or artists
+          // TODO: allow partial remembered tracks, and load the missing pages from spotify if needed
+          if (!track || !artists.length) return null;
+
+          tracks.push({
+            ...track,
+            artists,
+          });
+        }
+
+        const { owner } = playlist || {};
+
+        return {
+          ...snapshot,
+          owner,
+          tracks,
+        };
+      })
+      .filter(Boolean) as Snapshot[];
 
     // TODO: save/copy button
     // TODO: use bottleneck library to avoid 429s
@@ -106,11 +182,12 @@ export const loader: LoaderFunction = async ({
     sdk,
     profile,
     playlistPage,
+    rememberedSnapshots,
   };
 };
 
 function HomePage() {
-  const { sdk } = useLoaderData() as LoaderResponse;
+  const { sdk, rememberedSnapshots } = useLoaderData() as LoaderResponse;
 
   const [selectedDeviceId, setSelectedDeviceId] = useState('');
 
@@ -183,7 +260,10 @@ function HomePage() {
           />
         </Col>
       </Row>
-      <Playlists playPlaylistTrack={playPlaylistTrack} />
+      <Playlists
+        playPlaylistTrack={playPlaylistTrack}
+        rememberedSnapshots={rememberedSnapshots}
+      />
     </>
   ) : (
     <></>
