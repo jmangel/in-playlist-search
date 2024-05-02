@@ -33,6 +33,7 @@ type IndexTableRowWithLinkButtonProps = {
   onClick?: MouseEventHandler<HTMLButtonElement>;
   disabled?: boolean;
   className?: string;
+  actions?: JSX.Element;
 };
 const IndexTableRowWithLinkButton = ({
   index,
@@ -40,6 +41,7 @@ const IndexTableRowWithLinkButton = ({
   onClick,
   disabled,
   className = '',
+  actions,
 }: IndexTableRowWithLinkButtonProps) => (
   <td>
     <div className="d-flex justify-content-end">
@@ -53,6 +55,7 @@ const IndexTableRowWithLinkButton = ({
         <i className={`bi bi-${iconName} ${className}`} />
       </Button>
     </div>
+    {actions && <div className="d-flex justify-content-end">{actions}</div>}
   </td>
 );
 
@@ -119,7 +122,7 @@ const PlaylistRow = (props: Props) => {
                   playPlaylistTrack(playlist.uri, track.uri, index)
                 }
               />
-              <td colSpan={2}>{track.name}</td>
+              <td colSpan={1}>{track.name}</td>
               <td colSpan={2}>
                 {track.artists.map((artist) => artist.name).join(', ')}
               </td>
@@ -138,28 +141,28 @@ const PlaylistRow = (props: Props) => {
           index={index}
           iconName={`arrows-${showTracks ? 'collapse' : 'expand'}`}
           onClick={() => setShowTracks((prev) => !prev)}
-        />
-        <td>
-          <Dropdown focusFirstItemOnShow>
-            <Dropdown.Toggle
-              variant="link"
-              id="actions-dropdown"
-              className="p-0"
-              size="sm"
-            >
-              ...
-            </Dropdown.Toggle>
-
-            <Dropdown.Menu>
-              <Dropdown.Item
-                onClick={() => copySnapshot(playlist)}
-                className="btn btn-primary"
+          actions={
+            <Dropdown focusFirstItemOnShow>
+              <Dropdown.Toggle
+                id="actions-dropdown"
+                variant="link"
+                className="p-0"
+                size="sm"
               >
-                Save Copy
-              </Dropdown.Item>
-            </Dropdown.Menu>
-          </Dropdown>
-        </td>
+                ...
+              </Dropdown.Toggle>
+
+              <Dropdown.Menu>
+                <Dropdown.Item
+                  onClick={() => copySnapshot(playlist)}
+                  className="btn btn-primary"
+                >
+                  Save Copy
+                </Dropdown.Item>
+              </Dropdown.Menu>
+            </Dropdown>
+          }
+        />
         <td>
           <a target="_blank" href={spotifyUrl} rel="noreferrer">
             <strong>{name}</strong>
@@ -205,7 +208,7 @@ const PlaylistRow = (props: Props) => {
           </tr>
           <tr>
             <th>#</th>
-            <th colSpan={2}>Track</th>
+            <th colSpan={1}>Track</th>
             <th colSpan={2}>Artist</th>
             <th colSpan={1}>Album</th>
           </tr>
