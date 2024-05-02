@@ -113,13 +113,12 @@ export const loader: LoaderFunction = async ({
     const profilePromise = sdk.currentUser.profile();
     const playlistPagePromise = sdk.currentUser.playlists.playlists();
 
-    const [playlists, snapshots, allTracks, allArtists] = await Promise.all([
-      playlistDatabase.playlists.toArray(),
-      playlistDatabase.playlistSnapshots.toArray(),
-      playlistDatabase.tracks.toArray(),
-      playlistDatabase.artists.toArray(),
-    ]);
+    const playlists = await playlistDatabase.playlists.toArray();
+    const snapshots = await playlistDatabase.playlistSnapshots.toArray();
+    const allTracks = await playlistDatabase.tracks.toArray();
+    const allArtists = await playlistDatabase.artists.toArray();
 
+    // TODO: speed up this data processing if we can
     rememberedSnapshots = snapshots
       .map((snapshot) => {
         const playlist = playlists.find(({ id }) => id === snapshot.playlistId);
