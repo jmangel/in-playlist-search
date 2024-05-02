@@ -10,7 +10,10 @@ import {
   Track,
 } from '@spotify/web-api-ts-sdk';
 
-import { LoaderResponse as HomePageLoaderResponse } from '../pages/HomePage';
+import {
+  LoaderResponse as HomePageLoaderResponse,
+  RememberedSnapshot,
+} from '../pages/HomePage';
 import useBottleneck from '../hooks/useBottleneck';
 import PlaylistRow from './PlaylistRow';
 import { playlistDatabase } from '../db';
@@ -89,9 +92,10 @@ type Props = {
     songUri: string,
     offsetPosition: number
   ) => void;
+  rememberedSnapshots: RememberedSnapshot[];
 };
 const Playlists = (props: Props) => {
-  const { playPlaylistTrack } = props;
+  const { playPlaylistTrack, rememberedSnapshots } = props;
   const { playlistPage: firstPlaylistPage, sdk } =
     useLoaderData() as HomePageLoaderResponse;
 
@@ -182,10 +186,7 @@ const Playlists = (props: Props) => {
 
                 playlistDatabase.playlists.put({
                   id,
-                  owner: {
-                    id: playlist.owner.id,
-                    display_name: playlist.owner.display_name,
-                  },
+                  owner: playlist.owner,
                 });
                 playlistDatabase.playlistSnapshots.put({
                   playlistId: id,
