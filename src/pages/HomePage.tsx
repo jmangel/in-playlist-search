@@ -20,7 +20,7 @@ import {
 } from '@spotify/web-api-ts-sdk';
 
 import Playlists from '../components/Playlists';
-import { Artist, playlistDatabase } from '../db';
+import { Artist, Playlist, playlistDatabase, Track as DBTrack } from '../db';
 import PlaylistsProgressBar from '../components/PlaylistsProgressBar';
 
 const clientId = process.env.REACT_APP_CLIENT_ID || '';
@@ -118,14 +118,24 @@ export const loader: LoaderFunction = async ({ request }) => {
   const playlists = await playlistDatabase.playlists.toArray();
   const snapshots = await playlistDatabase.playlistSnapshots.toArray();
   const allTracks = await playlistDatabase.tracks.toArray();
-  const rememberedSnapshotsPromise = playlistDatabase.artists.toArray().then(
-    (allArtists) =>
-      // TODO: speed up this data processing if we can
-      snapshots
+  const rememberedSnapshotsPromise = playlistDatabase.artists
+    .toArray()
+    .then((allArtists) => {
+      const playlistsById = playlists.reduce((acc, playlist) => {
+        acc[playlist.id] = playlist;
+        return acc;
+      }, {} as { [id: string]: Playlist });
+      const tracksById = allTracks.reduce((acc, track) => {
+        acc[track.id] = track;
+        return acc;
+      }, {} as { [id: string]: DBTrack });
+      const artistsById = allArtists.reduce((acc, artist) => {
+        acc[artist.id] = artist;
+        return acc;
+      }, {} as { [id: string]: Artist });
+      const rememberedSnapshots = snapshots
         .map((snapshot): Snapshot | null => {
-          const playlist = playlists.find(
-            ({ id }) => id === snapshot.playlistId
-          );
+          const playlist = playlistsById[snapshot.playlistId];
 
           // skip snapshot if playlist info or any track ids are missing
           // TODO: allow partial remembered playlists, and load the missing pages from spotify if needed
@@ -139,9 +149,9 @@ export const loader: LoaderFunction = async ({ request }) => {
           const tracks = [];
           // use a for loop instead of forEach here to allow early return from the outer `.map` function
           for (const trackId of snapshot.trackIds) {
-            const track = allTracks.find(({ id }) => id === trackId);
+            const track = tracksById[trackId];
             const artists = (track?.artistIds
-              ?.map((artistId) => allArtists.find(({ id }) => id === artistId))
+              ?.map((artistId) => artistsById[artistId])
               ?.filter(Boolean) || []) as Artist[];
 
             // for now, throw away any snapshots with missing tracks or artists
@@ -169,8 +179,10 @@ export const loader: LoaderFunction = async ({ request }) => {
           const { id } = snapshot!;
           acc[id] = snapshot!;
           return acc;
-        }, {} as RememberedSnapshots)
-    );
+        }, {} as RememberedSnapshots);
+
+      return rememberedSnapshots;
+    });
 
   const diskUsageEstimationPromise =
     navigator.storage?.estimate?.() || Promise.resolve(null);
