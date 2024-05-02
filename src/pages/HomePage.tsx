@@ -107,7 +107,7 @@ export const loader: LoaderFunction = async ({
   const sdk = await getSdk();
 
   let profile, playlistPage;
-  let rememberedSnapshots = [] as Snapshot[];
+  let rememberedSnapshots: Snapshot[] = [];
 
   if (sdk) {
     const profilePromise = sdk.currentUser.profile();
@@ -120,7 +120,7 @@ export const loader: LoaderFunction = async ({
 
     // TODO: speed up this data processing if we can
     rememberedSnapshots = snapshots
-      .map((snapshot) => {
+      .map((snapshot): Snapshot | null => {
         const playlist = playlists.find(({ id }) => id === snapshot.playlistId);
 
         // skip snapshot if playlist info or any track ids are missing
@@ -156,9 +156,11 @@ export const loader: LoaderFunction = async ({
           ...snapshot,
           owner,
           tracks,
+          spotifyUrl: playlist.spotifyUrl,
+          uri: playlist.uri,
         };
       })
-      .filter(Boolean) as Snapshot[];
+      .filter(Boolean) as [];
 
     // TODO: save/copy button
     // TODO: use bottleneck library to avoid 429s
