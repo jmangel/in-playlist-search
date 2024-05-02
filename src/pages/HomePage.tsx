@@ -61,11 +61,15 @@ export type Snapshot = {
   spotifyUrl: string;
 };
 
+export type RememberedSnapshots = {
+  [snapshotId: string]: Snapshot;
+};
+
 export type LoaderResponse = {
   sdk: SpotifyApi | null;
   profile: UserProfile | null;
   playlistPage: Page<SimplifiedPlaylist> | null;
-  rememberedSnapshots: Snapshot[];
+  rememberedSnapshots: RememberedSnapshots;
   diskUsageEstimation: StorageEstimate | null;
 };
 
@@ -160,8 +164,13 @@ export const loader: LoaderFunction = async ({ request }) => {
             uri: playlist.uri,
           };
         })
-        .filter(Boolean) as []
-  );
+        .filter(Boolean)
+        .reduce((acc, snapshot) => {
+          const { id } = snapshot!;
+          acc[id] = snapshot!;
+          return acc;
+        }, {} as RememberedSnapshots)
+    );
 
   const diskUsageEstimationPromise =
     navigator.storage?.estimate?.() || Promise.resolve(null);

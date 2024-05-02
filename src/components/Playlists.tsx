@@ -8,7 +8,7 @@ import {
   Track as SpotifyTrack,
 } from '@spotify/web-api-ts-sdk';
 
-import { Snapshot } from '../pages/HomePage';
+import { RememberedSnapshots, Snapshot } from '../pages/HomePage';
 import useBottleneck from '../hooks/useBottleneck';
 import { playlistDatabase } from '../db';
 import PlaylistsTable from './PlaylistsTable';
@@ -74,7 +74,7 @@ type Props = {
     offsetPosition: number
   ) => void;
   copySnapshot: (snapshot: Snapshot) => void;
-  rememberedSnapshots: Snapshot[];
+  rememberedSnapshots: RememberedSnapshots;
   firstPlaylistPage: Page<SimplifiedPlaylist>;
   sdk: SpotifyApi;
   searchQuery: string;
@@ -162,10 +162,7 @@ const Playlists = (props: Props) => {
       if (!!sdk && !!playlistPage?.items)
         playlistPage.items.forEach(
           ({ id, external_urls, uri, snapshot_id }) => {
-            const rememberedSnapshot = rememberedSnapshots.find(
-              ({ playlistId, id: snapshotId }) =>
-                playlistId === id && snapshotId === snapshot_id
-            );
+            const rememberedSnapshot = rememberedSnapshots[snapshot_id];
             if (rememberedSnapshot) {
               setPlaylistsDetails((playlistsDetails) => ({
                 ...playlistsDetails,
