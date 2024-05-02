@@ -8,7 +8,7 @@ import {
 } from 'react';
 import { Await, LoaderFunction, defer, useLoaderData } from 'react-router-dom';
 
-import { Button, Col, Form, Row } from 'react-bootstrap';
+import { Alert, Button, Col, Form, Row } from 'react-bootstrap';
 import {
   AuthorizationCodeWithPKCEStrategy,
   Device,
@@ -66,6 +66,7 @@ export type LoaderResponse = {
   profile: UserProfile | null;
   playlistPage: Page<SimplifiedPlaylist> | null;
   rememberedSnapshots: Snapshot[];
+  diskUsageEstimation: StorageEstimate | null;
 };
 
 export const getSdk = async () => {
@@ -162,6 +163,9 @@ export const loader: LoaderFunction = async ({ request }) => {
         .filter(Boolean) as []
   );
 
+  const diskUsageEstimationPromise =
+    navigator.storage?.estimate?.() || Promise.resolve(null);
+
   // TODO: save/copy button
   // TODO: use bottleneck library to avoid 429s
   // TODO: handle 429s (re-queue)
@@ -178,6 +182,7 @@ export const loader: LoaderFunction = async ({ request }) => {
     profile: profilePromise,
     playlistPage: playlistPagePromise,
     rememberedSnapshots: rememberedSnapshotsPromise,
+    diskUsageEstimation: diskUsageEstimationPromise,
   });
 };
 
@@ -256,6 +261,7 @@ function HomePage() {
         </Col>
       </Row>
       <PlaylistsArea playPlaylistTrack={playPlaylistTrack} />
+      <DiskUsageAlert />
     </>
   ) : (
     <></>
@@ -408,6 +414,38 @@ const PlaylistsArea = (props: PlaylistsAreaProps) => {
         </Await>
       </Suspense>
     </>
+  );
+};
+
+const formatBytes = (bytes: number) => {
+  if (bytes === 0) return '0 Bytes';
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+};
+
+const DiskUsageAlert = () => {
+  const { diskUsageEstimation } = useLoaderData() as LoaderResponse;
+
+  return (
+    <Suspense fallback={<></>}>
+      <Await resolve={diskUsageEstimation} errorElement={<></>}>
+        {(diskUsageEstimation) => {
+          if (!diskUsageEstimation) return <></>;
+
+          const { usage, quota } = diskUsageEstimation;
+          const usagePercentage = (usage / quota) * 100;
+
+          return (
+            <Alert variant="info">
+              Cached playlists are using {formatBytes(usage)} on disk,{' '}
+              {usagePercentage.toFixed(2)}% of this app's storage quota.
+            </Alert>
+          );
+        }}
+      </Await>
+    </Suspense>
   );
 };
 

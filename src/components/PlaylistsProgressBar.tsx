@@ -37,7 +37,7 @@ const PlaylistsProgressBar = (props: PlaylistsProgressBarProps) => {
   }, [numTotal]);
 
   return (
-    <ProgressBar>
+    <ProgressBar className="mb-3">
       <ProgressBar
         animated={loading}
         now={numFullyLoaded}
