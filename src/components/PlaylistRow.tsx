@@ -106,7 +106,7 @@ const PlaylistRow = (props: Props) => {
         )
           return (
             <tr
-              key={track.id}
+              key={track.id || track.uri}
               className={!isMatching ? 'small fst-italic fw-lighter' : ''}
             >
               <IndexTableRowWithLinkButton
