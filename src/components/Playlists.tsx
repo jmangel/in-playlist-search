@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import { Col, Form, Row } from 'react-bootstrap';
 import {
   Page,
   PlaylistedTrack,
@@ -77,25 +76,30 @@ type Props = {
   rememberedSnapshots: Snapshot[];
   firstPlaylistPage: Page<SimplifiedPlaylist>;
   sdk: SpotifyApi;
+  searchQuery: string;
 };
 const Playlists = (props: Props) => {
-  const { playPlaylistTrack, rememberedSnapshots, firstPlaylistPage, sdk } =
-    props;
-
-  const [searchQuery, setSearchQuery] = useState('');
+  const {
+    playPlaylistTrack,
+    rememberedSnapshots,
+    firstPlaylistPage,
+    sdk,
+    searchQuery,
+  } = props;
 
   const { requestQueue, counts } = useBottleneck(SPOTIFY_BOTTLENECK_OPTIONS);
-
-  const loading =
-    !!counts?.RECEIVED ||
-    !!counts?.QUEUED ||
-    !!counts?.RUNNING ||
-    !!counts?.EXECUTING;
 
   const [playlistsPages, setPlaylistsPages] = useState<
     Page<SimplifiedPlaylist>[]
   >([]);
   const [allPlaylistPagesLoaded, setAllPlaylistPagesLoaded] = useState(false);
+
+  const loading =
+    !allPlaylistPagesLoaded ||
+    !!counts?.RECEIVED ||
+    !!counts?.QUEUED ||
+    !!counts?.RUNNING ||
+    !!counts?.EXECUTING;
 
   const [playlistsDetails, setPlaylistsDetails] = useState<{
     [playlistId: string]: Snapshot;
@@ -288,19 +292,6 @@ const Playlists = (props: Props) => {
 
   return (
     <>
-      <Row className="d-flex justify-content-start mb-2 align-items-center">
-        <Col xs="auto">
-          <h1>Your Playlists</h1>
-        </Col>
-        <Col>
-          <Form.Control
-            type="text"
-            placeholder="Search by song, artist, album, or playlist name or description"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value.toLowerCase())}
-          />
-        </Col>
-      </Row>
       <PlaylistsProgressBar
         loading={loading}
         numFullyLoaded={numFullyLoaded}

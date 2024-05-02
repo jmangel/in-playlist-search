@@ -8,7 +8,7 @@ import {
 } from 'react';
 import { Await, LoaderFunction, defer, useLoaderData } from 'react-router-dom';
 
-import { Button, Col, Form, Row, Spinner } from 'react-bootstrap';
+import { Button, Col, Form, Row } from 'react-bootstrap';
 import {
   AuthorizationCodeWithPKCEStrategy,
   Device,
@@ -21,6 +21,7 @@ import {
 
 import Playlists from '../components/Playlists';
 import { Artist, playlistDatabase } from '../db';
+import PlaylistsProgressBar from '../components/PlaylistsProgressBar';
 
 const clientId = process.env.REACT_APP_CLIENT_ID || '';
 const redirectUrl = `${process.env.REACT_APP_HOST_URI}/callback`;
@@ -181,8 +182,7 @@ export const loader: LoaderFunction = async ({ request }) => {
 };
 
 function HomePage() {
-  const { sdk, rememberedSnapshots, playlistPage } =
-    useLoaderData() as LoaderResponse;
+  const { sdk } = useLoaderData() as LoaderResponse;
 
   const [selectedDeviceId, setSelectedDeviceId] = useState('');
 
@@ -255,28 +255,7 @@ function HomePage() {
           />
         </Col>
       </Row>
-      <Suspense
-        fallback={
-          <div>
-            Getting cached playlists...
-            <Spinner />
-          </div>
-        }
-      >
-        <Await
-          resolve={Promise.all([rememberedSnapshots, playlistPage, sdk])}
-          errorElement={<div>Error loading remembered playlists</div>}
-        >
-          {([rememberedSnapshots, playlistPage, sdk]) => (
-            <Playlists
-              playPlaylistTrack={playPlaylistTrack}
-              rememberedSnapshots={rememberedSnapshots}
-              firstPlaylistPage={playlistPage}
-              sdk={sdk}
-            />
-          )}
-        </Await>
-      </Suspense>
+      <PlaylistsArea playPlaylistTrack={playPlaylistTrack} />
     </>
   ) : (
     <></>
@@ -369,6 +348,66 @@ const DevicesInput = (props: DevicesInputProps) => {
         )}
       </Await>
     </Suspense>
+  );
+};
+
+type PlaylistsAreaProps = {
+  playPlaylistTrack: (
+    playlistUri: string,
+    songUri: string,
+    offsetPosition: number
+  ) => void;
+};
+const PlaylistsArea = (props: PlaylistsAreaProps) => {
+  const { playPlaylistTrack } = props;
+  const { rememberedSnapshots, playlistPage, sdk } =
+    useLoaderData() as LoaderResponse;
+  const [searchQuery, setSearchQuery] = useState('');
+
+  return (
+    <>
+      <Row className="d-flex justify-content-start mb-2 align-items-center">
+        <Col xs="auto">
+          <h1>Your Playlists</h1>
+        </Col>
+        <Col>
+          <Form.Control
+            type="text"
+            placeholder="Search by song, artist, album, or playlist name or description"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value.toLowerCase())}
+          />
+        </Col>
+      </Row>
+      <Suspense
+        fallback={
+          <div>
+            <PlaylistsProgressBar
+              loading
+              numFullyLoaded={0}
+              numLoaded={0}
+              numTotal={1}
+              label="0 / loading..."
+            />
+          </div>
+        }
+      >
+        <Await
+          resolve={Promise.all([rememberedSnapshots, playlistPage, sdk])}
+          errorElement={<div>Error loading playlists</div>}
+        >
+          {([rememberedSnapshots, playlistPage, sdk]) => (
+            <Playlists
+              playPlaylistTrack={playPlaylistTrack}
+              rememberedSnapshots={rememberedSnapshots}
+              firstPlaylistPage={playlistPage}
+              sdk={sdk}
+              searchQuery={searchQuery}
+            />
+          )}
+        </Await>
+      </Suspense>
+    </>
   );
 };
 
