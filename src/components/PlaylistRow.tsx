@@ -1,10 +1,10 @@
-import { Playlist, Track } from '@spotify/web-api-ts-sdk';
 import { LoaderResponse as HomePageLoaderResponse } from '../pages/HomePage';
 import { useLoaderData } from 'react-router-dom';
 import { MouseEventHandler, useMemo, useState } from 'react';
 import { Button, Form } from 'react-bootstrap';
 import * as DOMPurify from 'dompurify';
 import { SPOTIFY_GREEN } from './Playlists';
+import { Snapshot, Track } from '../pages/HomePage';
 
 const DEFAULT_DOMPURIFY_URI_REGEX =
   /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|sms|cid|xmpp):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i;
@@ -22,7 +22,7 @@ const trackMatches = (searchQuery: string, track: Track) => {
   const searchWords = searchQuery.split(' ');
   const matchableString = `${track.name} ${track.artists
     .map(({ name }) => name)
-    .join(' ')} ${track.album.name}`.toLowerCase();
+    .join(' ')} ${track.albumName}`.toLowerCase();
 
   return searchWords.every((word) => matchableString.includes(word));
 };
@@ -57,7 +57,7 @@ const IndexTableRowWithLinkButton = ({
 );
 
 type Props = {
-  playlist: Playlist<Track>;
+  playlist: Snapshot;
   index: number;
   searchQuery: string;
   playPlaylistTrack: (
@@ -68,14 +68,8 @@ type Props = {
 };
 const PlaylistRow = (props: Props) => {
   const { playlist, index, searchQuery, playPlaylistTrack } = props;
-  const {
-    id,
-    name,
-    description,
-    tracks,
-    owner,
-    external_urls: { spotify: href } = {},
-  } = playlist;
+  const { id, name, description, tracks, owner, totalTracks, spotifyUrl } =
+    playlist;
 
   const { profile } = useLoaderData() as HomePageLoaderResponse;
 
@@ -84,7 +78,7 @@ const PlaylistRow = (props: Props) => {
     useState(false);
 
   const isOwner = owner.id === profile?.id;
-  const hasMissingOrExtraTracks = tracks.items.length !== tracks.total;
+  const hasMissingOrExtraTracks = tracks.length !== totalTracks;
 
   const matchesSearchTerm = useMemo(() => {
     if (!searchQuery) return true;
@@ -92,7 +86,7 @@ const PlaylistRow = (props: Props) => {
       name.toLowerCase().includes(searchQuery) ||
       owner.display_name.toLowerCase().includes(searchQuery) ||
       description.toLowerCase().includes(searchQuery) ||
-      tracks.items.some((track) => trackMatches(searchQuery, track.track))
+      tracks.some((track) => trackMatches(searchQuery, track))
     );
   }, [searchQuery, name, owner.display_name, description, tracks]);
 
@@ -100,7 +94,7 @@ const PlaylistRow = (props: Props) => {
 
   let queuePreviewIndex = -1;
   const trackRows = showTracks
-    ? tracks.items.map(({ track }, index) => {
+    ? tracks.map((track, index) => {
         const isMatching = trackMatches(searchQuery, track);
 
         if (isMatching) queuePreviewIndex = index + QUEUE_PREVIEW_LENGTH;
@@ -127,7 +121,7 @@ const PlaylistRow = (props: Props) => {
               <td colSpan={2}>
                 {track.artists.map((artist) => artist.name).join(', ')}
               </td>
-              <td colSpan={1}>{track.album.name}</td>
+              <td colSpan={1}>{track.albumName}</td>
             </tr>
           );
 
@@ -144,7 +138,7 @@ const PlaylistRow = (props: Props) => {
           onClick={() => setShowTracks((prev) => !prev)}
         />
         <td>
-          <a target="_blank" href={href} rel="noreferrer">
+          <a target="_blank" href={spotifyUrl} rel="noreferrer">
             <strong>{name}</strong>
           </a>
         </td>
@@ -163,8 +157,8 @@ const PlaylistRow = (props: Props) => {
           }}
         ></td>
         <td className={hasMissingOrExtraTracks ? 'bg-danger' : ''}>
-          {tracks.items.length}
-          {hasMissingOrExtraTracks ? ` / ${tracks.total}` : ''}
+          {tracks.length}
+          {hasMissingOrExtraTracks ? ` / ${totalTracks}` : ''}
         </td>
       </tr>
       {trackRows.length > 0 && (

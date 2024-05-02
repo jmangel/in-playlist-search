@@ -2,6 +2,8 @@ import Dexie, { Table } from 'dexie';
 
 export interface Playlist {
   id: string;
+  uri: string;
+  spotifyUrl: string;
   owner: {
     id: string;
     display_name: string;

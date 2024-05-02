@@ -4,15 +4,14 @@ import { useLoaderData } from 'react-router-dom';
 import { Col, Form, ProgressBar, Row, Table } from 'react-bootstrap';
 import {
   Page,
-  Playlist,
   PlaylistedTrack,
   SimplifiedPlaylist,
-  Track,
+  Track as SpotifyTrack,
 } from '@spotify/web-api-ts-sdk';
 
 import {
   LoaderResponse as HomePageLoaderResponse,
-  RememberedSnapshot,
+  Snapshot,
 } from '../pages/HomePage';
 import useBottleneck from '../hooks/useBottleneck';
 import PlaylistRow from './PlaylistRow';
@@ -60,7 +59,7 @@ const createProgressLabel = (
 const putTrackPageInDb = async (
   snapshotId: string,
   offset: number,
-  items: PlaylistedTrack<Track>[]
+  items: PlaylistedTrack<SpotifyTrack>[]
 ) => {
   playlistDatabase.artists.bulkPut(
     items.flatMap(({ track: { artists } }) =>
@@ -92,7 +91,7 @@ type Props = {
     songUri: string,
     offsetPosition: number
   ) => void;
-  rememberedSnapshots: RememberedSnapshot[];
+  rememberedSnapshots: Snapshot[];
 };
 const Playlists = (props: Props) => {
   const { playPlaylistTrack, rememberedSnapshots } = props;
@@ -115,7 +114,7 @@ const Playlists = (props: Props) => {
   const [allPlaylistPagesLoaded, setAllPlaylistPagesLoaded] = useState(false);
 
   const [playlistsDetails, setPlaylistsDetails] = useState<{
-    [key: string]: Playlist<Track>;
+    [playlistId: string]: Snapshot;
   }>();
 
   const queueLoadTracksPage = useCallback(
@@ -139,15 +138,20 @@ const Playlists = (props: Props) => {
                     'Loaded offset page of playlist tracks, but playlist not found in playlistsDetails'
                   );
 
-                tracksPage.items.forEach((track, index) => {
-                  playlist.tracks.items[offset + index] = track;
-                });
-
-                putTrackPageInDb(
-                  playlist.snapshot_id,
-                  offset,
-                  tracksPage.items
+                tracksPage.items.forEach(
+                  ({ track: { id, name, album, artists, uri } }, index) => {
+                    playlist.tracks[offset + index] = {
+                      id,
+                      name,
+                      albumName: album.name,
+                      artists,
+                      artistIds: artists.map(({ id }) => id),
+                      uri,
+                    };
+                  }
                 );
+
+                putTrackPageInDb(playlist.id, offset, tracksPage.items);
 
                 return {
                   ...playlistsDetails,
@@ -177,9 +181,32 @@ const Playlists = (props: Props) => {
                 playlist.external_urls = external_urls;
                 playlist.uri = uri;
 
+                const snapshot = {
+                  playlistId: id,
+                  id: snapshot_id,
+                  name: playlist.name,
+                  description: playlist.description,
+                  rememberedAt: new Date(),
+                  totalTracks: playlist.tracks.total,
+                  trackIds: [],
+                  uri,
+                  spotifyUrl: external_urls.spotify,
+                  owner: playlist.owner,
+                  tracks: playlist.tracks.items.map(
+                    ({ track: { id, name, album, artists, uri } }) => ({
+                      id,
+                      name,
+                      albumName: album.name,
+                      artistIds: artists.map(({ id }) => id),
+                      artists,
+                      uri,
+                    })
+                  ),
+                } as Snapshot;
+
                 setPlaylistsDetails((playlistsDetails) => ({
                   ...playlistsDetails,
-                  [id]: playlist,
+                  [id]: snapshot,
                 }));
 
                 const { limit, total, items } = playlist.tracks;
@@ -187,6 +214,8 @@ const Playlists = (props: Props) => {
                 playlistDatabase.playlists.put({
                   id,
                   owner: playlist.owner,
+                  uri,
+                  spotifyUrl: external_urls.spotify,
                 });
                 playlistDatabase.playlistSnapshots.put({
                   playlistId: id,
@@ -254,7 +283,7 @@ const Playlists = (props: Props) => {
   const numFullyLoaded = useMemo(
     () =>
       Object.values(playlistsDetails || {}).filter(
-        ({ tracks }) => tracks.items.length === tracks.total
+        ({ tracks, totalTracks }) => tracks.length === totalTracks
       ).length,
     [playlistsDetails]
   );

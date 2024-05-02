@@ -34,19 +34,20 @@ const scopes = [
   'user-modify-playback-state',
 ];
 
-export type RememberedSnapshot = {
+export type Track = {
+  artists: Artist[];
+  id: string;
+  name: string;
+  albumName: string;
+  artistIds: string[];
+  uri: string;
+};
+export type Snapshot = {
   owner: {
     id: string;
     display_name: string;
   };
-  tracks: {
-    artists: Artist[];
-    id: string;
-    name: string;
-    albumName: string;
-    artistIds: string[];
-    uri: string;
-  }[];
+  tracks: Track[];
   id: string;
   playlistId: string;
   name: string;
@@ -54,13 +55,15 @@ export type RememberedSnapshot = {
   rememberedAt: Date;
   totalTracks: number;
   trackIds: string[];
+  uri: string;
+  spotifyUrl: string;
 };
 
 export type LoaderResponse = {
   sdk?: SpotifyApi;
   profile?: UserProfile;
   playlistPage?: Page<SimplifiedPlaylist>;
-  rememberedSnapshots: RememberedSnapshot[];
+  rememberedSnapshots: Snapshot[];
 };
 
 export const getSdk = async () => {
@@ -104,7 +107,7 @@ export const loader: LoaderFunction = async ({
   const sdk = await getSdk();
 
   let profile, playlistPage;
-  let rememberedSnapshots = [] as RememberedSnapshot[];
+  let rememberedSnapshots = [] as Snapshot[];
 
   if (sdk) {
     const profilePromise = sdk.currentUser.profile();
@@ -156,7 +159,7 @@ export const loader: LoaderFunction = async ({
           tracks,
         };
       })
-      .filter(Boolean) as RememberedSnapshot[];
+      .filter(Boolean) as Snapshot[];
 
     // TODO: save/copy button
     // TODO: use bottleneck library to avoid 429s
