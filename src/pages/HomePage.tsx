@@ -189,6 +189,23 @@ export const loader: LoaderFunction = async ({ request }) => {
 function HomePage() {
   const { sdk } = useLoaderData() as LoaderResponse;
 
+  return (
+    <Suspense fallback={<div>Connecting to spotify...</div>}>
+      <Await
+        resolve={sdk}
+        errorElement={<div>Error connecting to spotify</div>}
+      >
+        {(sdk) => <Body sdk={sdk} />}
+      </Await>
+    </Suspense>
+  );
+}
+
+type BodyProps = {
+  sdk: SpotifyApi;
+};
+const Body = (props: BodyProps) => {
+  const { sdk } = props;
   const [selectedDeviceId, setSelectedDeviceId] = useState('');
 
   const playPlaylistTrack = useCallback(
@@ -247,7 +264,7 @@ function HomePage() {
     [sdk, selectedDeviceId]
   );
 
-  return sdk ? (
+  return (
     <>
       <Row className="align-items-center mb-1">
         <Col xs="auto">
@@ -257,16 +274,15 @@ function HomePage() {
           <DevicesInput
             selectedDeviceId={selectedDeviceId}
             setSelectedDeviceId={setSelectedDeviceId}
+            sdk={sdk}
           />
         </Col>
       </Row>
       <PlaylistsArea playPlaylistTrack={playPlaylistTrack} />
       <DiskUsageAlert />
     </>
-  ) : (
-    <></>
   );
-}
+};
 
 const ProfileInfo = () => {
   const { profile } = useLoaderData() as LoaderResponse;
@@ -298,17 +314,17 @@ const ProfileInfo = () => {
 type DevicesInputProps = {
   selectedDeviceId: string;
   setSelectedDeviceId: Dispatch<SetStateAction<string>>;
+  sdk: SpotifyApi;
 };
 const DevicesInput = (props: DevicesInputProps) => {
-  const { selectedDeviceId, setSelectedDeviceId } = props;
-  const { sdk } = useLoaderData() as LoaderResponse;
+  const { selectedDeviceId, setSelectedDeviceId, sdk } = props;
 
   const [devices, setDevices] = useState([] as Device[]);
 
   const loadDevices = useCallback(() => {
-    if (!sdk?.player) return;
-
-    sdk.player.getAvailableDevices().then(({ devices }) => setDevices(devices));
+    sdk?.player
+      ?.getAvailableDevices?.()
+      ?.then(({ devices }) => setDevices(devices));
   }, [sdk]);
 
   useEffect(loadDevices, [loadDevices]);
@@ -325,35 +341,27 @@ const DevicesInput = (props: DevicesInputProps) => {
   );
 
   return (
-    <Suspense fallback={<div>Loading devices...</div>}>
-      <Await resolve={sdk} errorElement={<div>Error loading devices</div>}>
-        {(sdk) => (
-          <div className="d-flex align-items-center">
-            <Form.Label className="flex-shrink-0 pr-1 mb-0">
-              Playing on
-            </Form.Label>
-            <Form.Select
-              className="flex-grow-1 mx-2"
-              name="select"
-              value={selectedDeviceId}
-              onChange={(e) => setSelectedDeviceId(e.target.value)}
-            >
-              <option value=""></option>
-              {devices
-                ?.filter(({ id }) => !!id)
-                .map(({ name, id }) => (
-                  <option key={`device-${id}`} value={id!}>
-                    {name}
-                  </option>
-                ))}
-            </Form.Select>
-            <Button onClick={loadDevices} className="flex-shrink-0">
-              Refresh devices
-            </Button>
-          </div>
-        )}
-      </Await>
-    </Suspense>
+    <div className="d-flex align-items-center">
+      <Form.Label className="flex-shrink-0 pr-1 mb-0">Playing on</Form.Label>
+      <Form.Select
+        className="flex-grow-1 mx-2"
+        name="select"
+        value={selectedDeviceId}
+        onChange={(e) => setSelectedDeviceId(e.target.value)}
+      >
+        <option value=""></option>
+        {devices
+          ?.filter(({ id }) => !!id)
+          .map(({ name, id }) => (
+            <option key={`device-${id}`} value={id!}>
+              {name}
+            </option>
+          ))}
+      </Form.Select>
+      <Button onClick={loadDevices} className="flex-shrink-0">
+        Refresh devices
+      </Button>
+    </div>
   );
 };
 
