@@ -41,7 +41,7 @@ export class PlaylistDatabase extends Dexie {
 
   constructor() {
     super('PlaylistDatabase');
-    this.version(1).stores({
+    this.version(2).stores({
       playlists: 'id',
       playlistSnapshots: 'id',
       tracks: 'id',

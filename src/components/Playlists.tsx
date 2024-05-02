@@ -61,13 +61,14 @@ const putTrackPageInDb = async (
   offset: number,
   items: PlaylistedTrack<SpotifyTrack>[]
 ) => {
-  playlistDatabase.artists.bulkPut(
+  await playlistDatabase.artists.bulkPut(
     items.flatMap(({ track: { artists } }) =>
-      artists.map(({ id, name }) => ({ id, name }))
+      artists.filter(({ id }) => !!id).map(({ id, name }) => ({ id, name }))
     )
   );
-  playlistDatabase.tracks.bulkPut(
-    items.map(({ track: { id, name, album, artists, uri } }) => ({
+  const presentItems = items.filter(({ track }) => !!track.id);
+  await playlistDatabase.tracks.bulkPut(
+    presentItems.map(({ track: { id, name, album, artists, uri } }) => ({
       id: id,
       name: name,
       albumName: album.name,
@@ -75,14 +76,14 @@ const putTrackPageInDb = async (
       uri: uri,
     }))
   );
-  const updateObject = items.reduce(
+  const updateObject = presentItems.reduce(
     (acc, { track: { id } }, index) => ({
       ...acc,
       [`trackIds.${offset + index}`]: id,
     }),
     {}
   );
-  playlistDatabase.playlistSnapshots.update(snapshotId, updateObject);
+  await playlistDatabase.playlistSnapshots.update(snapshotId, updateObject);
 };
 
 type Props = {
@@ -170,9 +171,22 @@ const Playlists = (props: Props) => {
       if (!playlistPage.next) setAllPlaylistPagesLoaded(true);
 
       if (!!sdk && !!playlistPage?.items)
-        playlistPage.items.map(
-          async ({ id, external_urls, uri, snapshot_id }) =>
-            requestQueue
+        playlistPage.items.forEach(
+          ({ id, external_urls, uri, snapshot_id }) => {
+            const rememberedSnapshot = rememberedSnapshots.find(
+              ({ playlistId, id: snapshotId }) =>
+                playlistId === id && snapshotId === snapshot_id
+            );
+            if (rememberedSnapshot) {
+              setPlaylistsDetails((playlistsDetails) => ({
+                ...playlistsDetails,
+                [id]: rememberedSnapshot,
+              }));
+
+              return;
+            }
+
+            return requestQueue
               .schedule(() =>
                 sdk.playlists.getPlaylist(id, undefined, PLAYLIST_FIELDS)
               )
@@ -236,10 +250,11 @@ const Playlists = (props: Props) => {
 
                   offset += limit;
                 }
-              })
+              });
+          }
         );
     },
-    [sdk, requestQueue, queueLoadTracksPage]
+    [sdk, requestQueue, rememberedSnapshots, queueLoadTracksPage]
   );
 
   const queueLoadPlaylistsPage = useCallback(
