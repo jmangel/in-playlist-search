@@ -22,9 +22,10 @@ type PlaylistsProgressBarProps = {
   numFullyLoaded: number;
   numLoaded: number;
   numTotal: number;
+  label?: string;
 };
 const PlaylistsProgressBar = (props: PlaylistsProgressBarProps) => {
-  const { loading, numFullyLoaded, numLoaded, numTotal } = props;
+  const { loading, numFullyLoaded, numLoaded, numTotal, label } = props;
 
   const progressLabelMinWidth = useMemo(() => {
     const maxPossibleCharacters = createProgressLabel(
@@ -41,7 +42,9 @@ const PlaylistsProgressBar = (props: PlaylistsProgressBarProps) => {
         animated={loading}
         now={numFullyLoaded}
         max={numTotal}
-        label={createProgressLabel(numFullyLoaded, numLoaded, numTotal)}
+        label={
+          label || createProgressLabel(numFullyLoaded, numLoaded, numTotal)
+        }
         variant="success"
         style={{ minWidth: progressLabelMinWidth }}
         // style={{ backgroundColor: SPOTIFY_GREEN }}
