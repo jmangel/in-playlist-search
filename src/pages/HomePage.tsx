@@ -61,8 +61,8 @@ export type Snapshot = {
 
 export type LoaderResponse = {
   sdk?: SpotifyApi;
-  profile?: UserProfile;
-  playlistPage?: Page<SimplifiedPlaylist>;
+  profile: UserProfile | null;
+  playlistPage: Page<SimplifiedPlaylist> | null;
   rememberedSnapshots: Snapshot[];
 };
 
@@ -106,78 +106,74 @@ export const loader: LoaderFunction = async ({
 }): Promise<LoaderResponse> => {
   const sdk = await getSdk();
 
-  let profile, playlistPage;
-  let rememberedSnapshots: Snapshot[] = [];
+  const profilePromise = sdk?.currentUser?.profile() || Promise.resolve(null);
+  const playlistPagePromise =
+    sdk?.currentUser?.playlists?.playlists() || Promise.resolve(null);
 
-  if (sdk) {
-    const profilePromise = sdk.currentUser.profile();
-    const playlistPagePromise = sdk.currentUser.playlists.playlists();
+  const playlists = await playlistDatabase.playlists.toArray();
+  const snapshots = await playlistDatabase.playlistSnapshots.toArray();
+  const allTracks = await playlistDatabase.tracks.toArray();
+  const allArtists = await playlistDatabase.artists.toArray();
 
-    const playlists = await playlistDatabase.playlists.toArray();
-    const snapshots = await playlistDatabase.playlistSnapshots.toArray();
-    const allTracks = await playlistDatabase.tracks.toArray();
-    const allArtists = await playlistDatabase.artists.toArray();
+  // TODO: speed up this data processing if we can
+  const rememberedSnapshots = snapshots
+    .map((snapshot): Snapshot | null => {
+      const playlist = playlists.find(({ id }) => id === snapshot.playlistId);
 
-    // TODO: speed up this data processing if we can
-    rememberedSnapshots = snapshots
-      .map((snapshot): Snapshot | null => {
-        const playlist = playlists.find(({ id }) => id === snapshot.playlistId);
+      // skip snapshot if playlist info or any track ids are missing
+      // TODO: allow partial remembered playlists, and load the missing pages from spotify if needed
+      if (
+        !playlist ||
+        snapshot.trackIds.length < snapshot.totalTracks ||
+        snapshot.trackIds.some((trackId) => !trackId)
+      )
+        return null;
 
-        // skip snapshot if playlist info or any track ids are missing
-        // TODO: allow partial remembered playlists, and load the missing pages from spotify if needed
-        if (
-          !playlist ||
-          snapshot.trackIds.length < snapshot.totalTracks ||
-          snapshot.trackIds.some((trackId) => !trackId)
-        )
-          return null;
+      const tracks = [];
+      // use a for loop instead of forEach here to allow early return from the outer `.map` function
+      for (const trackId of snapshot.trackIds) {
+        const track = allTracks.find(({ id }) => id === trackId);
+        const artists = (track?.artistIds
+          ?.map((artistId) => allArtists.find(({ id }) => id === artistId))
+          ?.filter(Boolean) || []) as Artist[];
 
-        const tracks = [];
-        // use a for loop instead of forEach here to allow early return from the outer `.map` function
-        for (const trackId of snapshot.trackIds) {
-          const track = allTracks.find(({ id }) => id === trackId);
-          const artists = (track?.artistIds
-            ?.map((artistId) => allArtists.find(({ id }) => id === artistId))
-            ?.filter(Boolean) || []) as Artist[];
+        // for now, throw away any snapshots with missing tracks or artists
+        // TODO: allow partial remembered tracks, and load the missing pages from spotify if needed
+        if (!track || !artists.length) return null;
 
-          // for now, throw away any snapshots with missing tracks or artists
-          // TODO: allow partial remembered tracks, and load the missing pages from spotify if needed
-          if (!track || !artists.length) return null;
+        tracks.push({
+          ...track,
+          artists,
+        });
+      }
 
-          tracks.push({
-            ...track,
-            artists,
-          });
-        }
+      const { owner } = playlist || {};
 
-        const { owner } = playlist || {};
+      return {
+        ...snapshot,
+        owner,
+        tracks,
+        spotifyUrl: playlist.spotifyUrl,
+        uri: playlist.uri,
+      };
+    })
+    .filter(Boolean) as [];
 
-        return {
-          ...snapshot,
-          owner,
-          tracks,
-          spotifyUrl: playlist.spotifyUrl,
-          uri: playlist.uri,
-        };
-      })
-      .filter(Boolean) as [];
+  // TODO: save/copy button
+  // TODO: use bottleneck library to avoid 429s
+  // TODO: handle 429s (re-queue)
+  // TODO: handle 401s (refresh token)
+  // TODO: restore/save copy of playlist (button)
+  // TODO: allow refreshing devices (button)
+  // TODO: cache playlists
+  // TODO: get cached playlists
+  // TODO: use refresh token?
+  // TODO: get track features (uniq set across all playlist tracks)
 
-    // TODO: save/copy button
-    // TODO: use bottleneck library to avoid 429s
-    // TODO: handle 429s (re-queue)
-    // TODO: handle 401s (refresh token)
-    // TODO: restore/save copy of playlist (button)
-    // TODO: allow refreshing devices (button)
-    // TODO: cache playlists
-    // TODO: get cached playlists
-    // TODO: use refresh token?
-    // TODO: get track features (uniq set across all playlist tracks)
-
-    [profile, playlistPage] = await Promise.all([
-      profilePromise,
-      playlistPagePromise,
-    ]);
-  }
+  const [profile, playlistPage] = await Promise.all([
+    profilePromise,
+    playlistPagePromise,
+  ]);
 
   return {
     sdk,
