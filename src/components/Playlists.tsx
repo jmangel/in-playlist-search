@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import { Col, Form, ProgressBar, Row, Table } from 'react-bootstrap';
+import { Col, Form, ProgressBar, Row } from 'react-bootstrap';
 import {
   Page,
   PlaylistedTrack,
@@ -11,8 +11,8 @@ import {
 
 import { Snapshot } from '../pages/HomePage';
 import useBottleneck from '../hooks/useBottleneck';
-import PlaylistRow from './PlaylistRow';
 import { playlistDatabase } from '../db';
+import PlaylistsTable from './PlaylistsTable';
 
 export const SPOTIFY_GREEN = '#1DB954';
 
@@ -336,28 +336,13 @@ const Playlists = (props: Props) => {
           // style={{ backgroundColor: SPOTIFY_GREEN }}
         />
       </ProgressBar>
-      <Table striped bordered hover responsive>
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Name</th>
-            <th>Owner</th>
-            <th>Description</th>
-            <th>Tracks</th>
-          </tr>
-        </thead>
-        <tbody>
-          {Object.values(playlistsDetails || {})?.map((playlist, index) => (
-            <PlaylistRow
-              key={playlist.id}
-              playlist={playlist}
-              index={index}
-              searchQuery={searchQuery}
-              playPlaylistTrack={playPlaylistTrack}
-            />
-          ))}
-        </tbody>
-      </Table>
+      {playlistsDetails && (
+        <PlaylistsTable
+          playlistsDetails={playlistsDetails}
+          searchQuery={searchQuery}
+          playPlaylistTrack={playPlaylistTrack}
+        />
+      )}
     </>
   );
 };
