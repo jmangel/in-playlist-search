@@ -1,13 +1,14 @@
 import {
   Dispatch,
   SetStateAction,
+  Suspense,
   useCallback,
   useEffect,
   useState,
 } from 'react';
-import { LoaderFunction, useLoaderData } from 'react-router-dom';
+import { Await, LoaderFunction, defer, useLoaderData } from 'react-router-dom';
 
-import { Button, Col, Form, Row } from 'react-bootstrap';
+import { Button, Col, Form, Row, Spinner } from 'react-bootstrap';
 import {
   AuthorizationCodeWithPKCEStrategy,
   Device,
@@ -60,7 +61,7 @@ export type Snapshot = {
 };
 
 export type LoaderResponse = {
-  sdk?: SpotifyApi;
+  sdk: SpotifyApi | null;
   profile: UserProfile | null;
   playlistPage: Page<SimplifiedPlaylist> | null;
   rememberedSnapshots: Snapshot[];
@@ -101,9 +102,7 @@ export const getSdk = async () => {
   return sdk;
 };
 
-export const loader: LoaderFunction = async ({
-  request,
-}): Promise<LoaderResponse> => {
+export const loader: LoaderFunction = async ({ request }) => {
   const sdk = await getSdk();
 
   const profilePromise = sdk?.currentUser?.profile() || Promise.resolve(null);
@@ -173,22 +172,17 @@ export const loader: LoaderFunction = async ({
   // TODO: use refresh token?
   // TODO: get track features (uniq set across all playlist tracks)
 
-  const [profile, playlistPage, rememberedSnapshots] = await Promise.all([
-    profilePromise,
-    playlistPagePromise,
-    rememberedSnapshotsPromise,
-  ]);
-
-  return {
-    sdk,
-    profile,
-    playlistPage,
-    rememberedSnapshots,
-  };
+  return defer({
+    sdk: Promise.resolve(sdk || null),
+    profile: profilePromise,
+    playlistPage: playlistPagePromise,
+    rememberedSnapshots: rememberedSnapshotsPromise,
+  });
 };
 
 function HomePage() {
-  const { sdk, rememberedSnapshots } = useLoaderData() as LoaderResponse;
+  const { sdk, rememberedSnapshots, playlistPage } =
+    useLoaderData() as LoaderResponse;
 
   const [selectedDeviceId, setSelectedDeviceId] = useState('');
 
@@ -261,10 +255,28 @@ function HomePage() {
           />
         </Col>
       </Row>
-      <Playlists
-        playPlaylistTrack={playPlaylistTrack}
-        rememberedSnapshots={rememberedSnapshots}
-      />
+      <Suspense
+        fallback={
+          <div>
+            Getting cached playlists...
+            <Spinner />
+          </div>
+        }
+      >
+        <Await
+          resolve={Promise.all([rememberedSnapshots, playlistPage, sdk])}
+          errorElement={<div>Error loading remembered playlists</div>}
+        >
+          {([rememberedSnapshots, playlistPage, sdk]) => (
+            <Playlists
+              playPlaylistTrack={playPlaylistTrack}
+              rememberedSnapshots={rememberedSnapshots}
+              firstPlaylistPage={playlistPage}
+              sdk={sdk}
+            />
+          )}
+        </Await>
+      </Suspense>
     </>
   ) : (
     <></>
@@ -274,22 +286,27 @@ function HomePage() {
 const ProfileInfo = () => {
   const { profile } = useLoaderData() as LoaderResponse;
 
-  const { display_name: name, external_urls: { spotify: url = '' } = {} } =
-    profile || {};
-
-  return name ? (
-    <h1 className="mb-0">
-      Logged in as{' '}
-      {url ? (
-        <a target="_blank" href={url} rel="noreferrer">
-          {name}
-        </a>
-      ) : (
-        name
-      )}
-    </h1>
-  ) : (
-    <></>
+  return (
+    <Suspense fallback={<div>Loading profile...</div>}>
+      <Await resolve={profile} errorElement={<div>Error loading profile</div>}>
+        {({ display_name: name, external_urls: { spotify: url = '' } = {} }) =>
+          name ? (
+            <h1 className="mb-0">
+              Logged in as{' '}
+              {url ? (
+                <a target="_blank" href={url} rel="noreferrer">
+                  {name}
+                </a>
+              ) : (
+                name
+              )}
+            </h1>
+          ) : (
+            <></>
+          )
+        }
+      </Await>
+    </Suspense>
   );
 };
 
@@ -304,7 +321,7 @@ const DevicesInput = (props: DevicesInputProps) => {
   const [devices, setDevices] = useState([] as Device[]);
 
   const loadDevices = useCallback(() => {
-    if (!sdk) return;
+    if (!sdk?.player) return;
 
     sdk.player.getAvailableDevices().then(({ devices }) => setDevices(devices));
   }, [sdk]);
@@ -323,27 +340,35 @@ const DevicesInput = (props: DevicesInputProps) => {
   );
 
   return (
-    <div className="d-flex align-items-center">
-      <Form.Label className="flex-shrink-0 pr-1 mb-0">Playing on</Form.Label>
-      <Form.Select
-        className="flex-grow-1 mx-2"
-        name="select"
-        value={selectedDeviceId}
-        onChange={(e) => setSelectedDeviceId(e.target.value)}
-      >
-        <option value=""></option>
-        {devices
-          ?.filter(({ id }) => !!id)
-          .map(({ name, id }) => (
-            <option key={`device-${id}`} value={id!}>
-              {name}
-            </option>
-          ))}
-      </Form.Select>
-      <Button onClick={loadDevices} className="flex-shrink-0">
-        Refresh devices
-      </Button>
-    </div>
+    <Suspense fallback={<div>Loading devices...</div>}>
+      <Await resolve={sdk} errorElement={<div>Error loading devices</div>}>
+        {(sdk) => (
+          <div className="d-flex align-items-center">
+            <Form.Label className="flex-shrink-0 pr-1 mb-0">
+              Playing on
+            </Form.Label>
+            <Form.Select
+              className="flex-grow-1 mx-2"
+              name="select"
+              value={selectedDeviceId}
+              onChange={(e) => setSelectedDeviceId(e.target.value)}
+            >
+              <option value=""></option>
+              {devices
+                ?.filter(({ id }) => !!id)
+                .map(({ name, id }) => (
+                  <option key={`device-${id}`} value={id!}>
+                    {name}
+                  </option>
+                ))}
+            </Form.Select>
+            <Button onClick={loadDevices} className="flex-shrink-0">
+              Refresh devices
+            </Button>
+          </div>
+        )}
+      </Await>
+    </Suspense>
   );
 };
 

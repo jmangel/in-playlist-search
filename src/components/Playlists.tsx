@@ -1,18 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useLoaderData } from 'react-router-dom';
 
 import { Col, Form, ProgressBar, Row, Table } from 'react-bootstrap';
 import {
   Page,
   PlaylistedTrack,
   SimplifiedPlaylist,
+  SpotifyApi,
   Track as SpotifyTrack,
 } from '@spotify/web-api-ts-sdk';
 
-import {
-  LoaderResponse as HomePageLoaderResponse,
-  Snapshot,
-} from '../pages/HomePage';
+import { Snapshot } from '../pages/HomePage';
 import useBottleneck from '../hooks/useBottleneck';
 import PlaylistRow from './PlaylistRow';
 import { playlistDatabase } from '../db';
@@ -93,11 +90,12 @@ type Props = {
     offsetPosition: number
   ) => void;
   rememberedSnapshots: Snapshot[];
+  firstPlaylistPage: Page<SimplifiedPlaylist>;
+  sdk: SpotifyApi;
 };
 const Playlists = (props: Props) => {
-  const { playPlaylistTrack, rememberedSnapshots } = props;
-  const { playlistPage: firstPlaylistPage, sdk } =
-    useLoaderData() as HomePageLoaderResponse;
+  const { playPlaylistTrack, rememberedSnapshots, firstPlaylistPage, sdk } =
+    props;
 
   const [searchQuery, setSearchQuery] = useState('');
 
