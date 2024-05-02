@@ -113,51 +113,54 @@ export const loader: LoaderFunction = async ({
   const playlists = await playlistDatabase.playlists.toArray();
   const snapshots = await playlistDatabase.playlistSnapshots.toArray();
   const allTracks = await playlistDatabase.tracks.toArray();
-  const allArtists = await playlistDatabase.artists.toArray();
+  const rememberedSnapshotsPromise = playlistDatabase.artists.toArray().then(
+    (allArtists) =>
+      // TODO: speed up this data processing if we can
+      snapshots
+        .map((snapshot): Snapshot | null => {
+          const playlist = playlists.find(
+            ({ id }) => id === snapshot.playlistId
+          );
 
-  // TODO: speed up this data processing if we can
-  const rememberedSnapshots = snapshots
-    .map((snapshot): Snapshot | null => {
-      const playlist = playlists.find(({ id }) => id === snapshot.playlistId);
+          // skip snapshot if playlist info or any track ids are missing
+          // TODO: allow partial remembered playlists, and load the missing pages from spotify if needed
+          if (
+            !playlist ||
+            snapshot.trackIds.length < snapshot.totalTracks ||
+            snapshot.trackIds.some((trackId) => !trackId)
+          )
+            return null;
 
-      // skip snapshot if playlist info or any track ids are missing
-      // TODO: allow partial remembered playlists, and load the missing pages from spotify if needed
-      if (
-        !playlist ||
-        snapshot.trackIds.length < snapshot.totalTracks ||
-        snapshot.trackIds.some((trackId) => !trackId)
-      )
-        return null;
+          const tracks = [];
+          // use a for loop instead of forEach here to allow early return from the outer `.map` function
+          for (const trackId of snapshot.trackIds) {
+            const track = allTracks.find(({ id }) => id === trackId);
+            const artists = (track?.artistIds
+              ?.map((artistId) => allArtists.find(({ id }) => id === artistId))
+              ?.filter(Boolean) || []) as Artist[];
 
-      const tracks = [];
-      // use a for loop instead of forEach here to allow early return from the outer `.map` function
-      for (const trackId of snapshot.trackIds) {
-        const track = allTracks.find(({ id }) => id === trackId);
-        const artists = (track?.artistIds
-          ?.map((artistId) => allArtists.find(({ id }) => id === artistId))
-          ?.filter(Boolean) || []) as Artist[];
+            // for now, throw away any snapshots with missing tracks or artists
+            // TODO: allow partial remembered tracks, and load the missing pages from spotify if needed
+            if (!track || !artists.length) return null;
 
-        // for now, throw away any snapshots with missing tracks or artists
-        // TODO: allow partial remembered tracks, and load the missing pages from spotify if needed
-        if (!track || !artists.length) return null;
+            tracks.push({
+              ...track,
+              artists,
+            });
+          }
 
-        tracks.push({
-          ...track,
-          artists,
-        });
-      }
+          const { owner } = playlist || {};
 
-      const { owner } = playlist || {};
-
-      return {
-        ...snapshot,
-        owner,
-        tracks,
-        spotifyUrl: playlist.spotifyUrl,
-        uri: playlist.uri,
-      };
-    })
-    .filter(Boolean) as [];
+          return {
+            ...snapshot,
+            owner,
+            tracks,
+            spotifyUrl: playlist.spotifyUrl,
+            uri: playlist.uri,
+          };
+        })
+        .filter(Boolean) as []
+  );
 
   // TODO: save/copy button
   // TODO: use bottleneck library to avoid 429s
@@ -170,9 +173,10 @@ export const loader: LoaderFunction = async ({
   // TODO: use refresh token?
   // TODO: get track features (uniq set across all playlist tracks)
 
-  const [profile, playlistPage] = await Promise.all([
+  const [profile, playlistPage, rememberedSnapshots] = await Promise.all([
     profilePromise,
     playlistPagePromise,
+    rememberedSnapshotsPromise,
   ]);
 
   return {
