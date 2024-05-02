@@ -187,15 +187,15 @@ export const loader: LoaderFunction = async ({ request }) => {
 };
 
 function HomePage() {
-  const { sdk } = useLoaderData() as LoaderResponse;
+  const { sdk, profile } = useLoaderData() as LoaderResponse;
 
   return (
     <Suspense fallback={<div>Connecting to spotify...</div>}>
       <Await
-        resolve={sdk}
+        resolve={Promise.all([sdk, profile])}
         errorElement={<div>Error connecting to spotify</div>}
       >
-        {(sdk) => <Body sdk={sdk} />}
+        {([sdk, profile]) => <Body sdk={sdk} profile={profile} />}
       </Await>
     </Suspense>
   );
@@ -203,9 +203,10 @@ function HomePage() {
 
 type BodyProps = {
   sdk: SpotifyApi;
+  profile: UserProfile;
 };
 const Body = (props: BodyProps) => {
-  const { sdk } = props;
+  const { sdk, profile } = props;
   const [selectedDeviceId, setSelectedDeviceId] = useState('');
 
   const playPlaylistTrack = useCallback(
@@ -264,6 +265,41 @@ const Body = (props: BodyProps) => {
     [sdk, selectedDeviceId]
   );
 
+  function decodeHtml(input: string) {
+    var doc = new DOMParser().parseFromString(input, 'text/html');
+    return doc.documentElement.textContent;
+  }
+
+  const copySnapshot = useCallback(
+    (snapshot: Snapshot) => {
+      const { name, description, rememberedAt } = snapshot;
+
+      const rememberedDate = rememberedAt ? new Date(rememberedAt) : new Date();
+      let copiedDescription = `(copied on ${rememberedDate.toLocaleDateString(
+        undefined,
+        {
+          dateStyle: 'short',
+        }
+      )})`;
+      if (description) {
+        copiedDescription += ` - ${decodeHtml(description)}`;
+      }
+
+      sdk.playlists
+        .createPlaylist(profile.id, {
+          name,
+          description: copiedDescription,
+          public: false,
+          collaborative: false,
+        })
+        .then((playlist) => {
+          const trackUris = snapshot.tracks.map(({ uri }) => uri);
+          sdk.playlists.addItemsToPlaylist(playlist.id, trackUris);
+        });
+    },
+    [sdk, profile]
+  );
+
   return (
     <>
       <Row className="align-items-center mb-1">
@@ -278,7 +314,10 @@ const Body = (props: BodyProps) => {
           />
         </Col>
       </Row>
-      <PlaylistsArea playPlaylistTrack={playPlaylistTrack} />
+      <PlaylistsArea
+        playPlaylistTrack={playPlaylistTrack}
+        copySnapshot={copySnapshot}
+      />
       <DiskUsageAlert />
     </>
   );
@@ -371,9 +410,10 @@ type PlaylistsAreaProps = {
     songUri: string,
     offsetPosition: number
   ) => void;
+  copySnapshot: (snapshot: Snapshot) => void;
 };
 const PlaylistsArea = (props: PlaylistsAreaProps) => {
-  const { playPlaylistTrack } = props;
+  const { playPlaylistTrack, copySnapshot } = props;
   const { rememberedSnapshots, playlistPage, sdk } =
     useLoaderData() as LoaderResponse;
   const [searchQuery, setSearchQuery] = useState('');
@@ -413,6 +453,7 @@ const PlaylistsArea = (props: PlaylistsAreaProps) => {
           {([rememberedSnapshots, playlistPage, sdk]) => (
             <Playlists
               playPlaylistTrack={playPlaylistTrack}
+              copySnapshot={copySnapshot}
               rememberedSnapshots={rememberedSnapshots}
               firstPlaylistPage={playlistPage}
               sdk={sdk}

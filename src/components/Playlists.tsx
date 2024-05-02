@@ -73,6 +73,7 @@ type Props = {
     songUri: string,
     offsetPosition: number
   ) => void;
+  copySnapshot: (snapshot: Snapshot) => void;
   rememberedSnapshots: Snapshot[];
   firstPlaylistPage: Page<SimplifiedPlaylist>;
   sdk: SpotifyApi;
@@ -81,6 +82,7 @@ type Props = {
 const Playlists = (props: Props) => {
   const {
     playPlaylistTrack,
+    copySnapshot,
     rememberedSnapshots,
     firstPlaylistPage,
     sdk,
@@ -303,6 +305,7 @@ const Playlists = (props: Props) => {
           playlistsDetails={playlistsDetails}
           searchQuery={searchQuery}
           playPlaylistTrack={playPlaylistTrack}
+          copySnapshot={copySnapshot}
         />
       )}
     </>

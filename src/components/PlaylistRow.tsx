@@ -1,7 +1,7 @@
 import { LoaderResponse as HomePageLoaderResponse } from '../pages/HomePage';
 import { useLoaderData } from 'react-router-dom';
 import { MouseEventHandler, useMemo, useState } from 'react';
-import { Button, Form } from 'react-bootstrap';
+import { Button, Dropdown, Form } from 'react-bootstrap';
 import * as DOMPurify from 'dompurify';
 import { SPOTIFY_GREEN } from './Playlists';
 import { Snapshot, Track } from '../pages/HomePage';
@@ -65,9 +65,11 @@ type Props = {
     songUri: string,
     offsetPosition: number
   ) => void;
+  copySnapshot: (snapshot: Snapshot) => void;
 };
 const PlaylistRow = (props: Props) => {
-  const { playlist, index, searchQuery, playPlaylistTrack } = props;
+  const { playlist, index, searchQuery, playPlaylistTrack, copySnapshot } =
+    props;
   const { id, name, description, tracks, owner, totalTracks, spotifyUrl } =
     playlist;
 
@@ -117,7 +119,7 @@ const PlaylistRow = (props: Props) => {
                   playPlaylistTrack(playlist.uri, track.uri, index)
                 }
               />
-              <td colSpan={1}>{track.name}</td>
+              <td colSpan={2}>{track.name}</td>
               <td colSpan={2}>
                 {track.artists.map((artist) => artist.name).join(', ')}
               </td>
@@ -137,6 +139,27 @@ const PlaylistRow = (props: Props) => {
           iconName={`arrows-${showTracks ? 'collapse' : 'expand'}`}
           onClick={() => setShowTracks((prev) => !prev)}
         />
+        <td>
+          <Dropdown focusFirstItemOnShow>
+            <Dropdown.Toggle
+              variant="link"
+              id="actions-dropdown"
+              className="p-0"
+              size="sm"
+            >
+              ...
+            </Dropdown.Toggle>
+
+            <Dropdown.Menu>
+              <Dropdown.Item
+                onClick={() => copySnapshot(playlist)}
+                className="btn btn-primary"
+              >
+                Save Copy
+              </Dropdown.Item>
+            </Dropdown.Menu>
+          </Dropdown>
+        </td>
         <td>
           <a target="_blank" href={spotifyUrl} rel="noreferrer">
             <strong>{name}</strong>
@@ -182,7 +205,7 @@ const PlaylistRow = (props: Props) => {
           </tr>
           <tr>
             <th>#</th>
-            <th colSpan={1}>Track</th>
+            <th colSpan={2}>Track</th>
             <th colSpan={2}>Artist</th>
             <th colSpan={1}>Album</th>
           </tr>
