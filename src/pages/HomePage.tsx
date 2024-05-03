@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { LoaderFunction, defer } from 'react-router-dom';
 
 import { Row } from 'react-bootstrap';
@@ -12,7 +11,6 @@ import {
 
 import DeferredPlaylists from '../components/DeferredPlaylists';
 import { Artist, Playlist, playlistDatabase, Track as DBTrack } from '../db';
-import DeferredDeviceInput from '../components/DeferredDeviceInput';
 import DeferredProfileInfo from '../components/DeferredProfileInfo';
 import DiskUsageAlert from '../components/DiskUsageAlert';
 
@@ -202,18 +200,12 @@ export const loader: LoaderFunction = async ({ request }) => {
 };
 
 function HomePage() {
-  const [selectedDeviceId, setSelectedDeviceId] = useState('');
-
   return (
     <>
       <Row className="align-items-center mb-1">
         <DeferredProfileInfo />
-        <DeferredDeviceInput
-          selectedDeviceId={selectedDeviceId}
-          setSelectedDeviceId={setSelectedDeviceId}
-        />
       </Row>
-      <DeferredPlaylists selectedDeviceId={selectedDeviceId} />
+      <DeferredPlaylists />
       <DiskUsageAlert />
     </>
   );

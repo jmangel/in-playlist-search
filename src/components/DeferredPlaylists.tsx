@@ -9,6 +9,7 @@ import {
 } from 'react';
 
 import {
+  Device,
   Page,
   PlaybackState,
   PlaylistedTrack,
@@ -29,7 +30,7 @@ import { playlistDatabase } from '../db';
 import PlaylistsTable from './PlaylistsTable';
 import PlaylistsProgressBar from './PlaylistsProgressBar';
 import { Await, useLoaderData } from 'react-router-dom';
-import { Col, Form, Row } from 'react-bootstrap';
+import { Button, Col, Form, Row } from 'react-bootstrap';
 
 // unfortunately spotify can return an item that's just { track: null }
 // even though the sdk types don't specify this
@@ -96,17 +97,83 @@ function decodeHtml(input: string) {
   return doc.documentElement.textContent;
 }
 
+type DeviceInputProps = {
+  selectedDeviceId?: string;
+  setSelectedDeviceId?: Dispatch<SetStateAction<string>>;
+  sdk?: SpotifyApi;
+};
+const DeviceInput = (props: DeviceInputProps) => {
+  const { selectedDeviceId, setSelectedDeviceId, sdk } = props;
+
+  const [devices, setDevices] = useState([] as Device[]);
+
+  const loadDevices = useCallback(() => {
+    sdk?.player
+      ?.getAvailableDevices?.()
+      ?.then(({ devices }) => setDevices(devices));
+  }, [sdk]);
+
+  useEffect(loadDevices, [loadDevices]);
+
+  useEffect(
+    () =>
+      setSelectedDeviceId?.(
+        (selectedDeviceId) =>
+          devices?.find(({ is_active }) => is_active)?.id ||
+          selectedDeviceId ||
+          ''
+      ),
+    [devices, setSelectedDeviceId]
+  );
+
+  return (
+    <div className="d-flex align-items-center">
+      <Form.Label className="flex-shrink-0 pr-1 mb-0">Playing on</Form.Label>
+      <Form.Select
+        className="flex-grow-1 mx-2"
+        name="select"
+        value={selectedDeviceId}
+        disabled={!setSelectedDeviceId}
+        onChange={(e) => setSelectedDeviceId?.(e.target.value)}
+      >
+        <option value=""></option>
+        {devices
+          ?.filter(({ id }) => !!id)
+          .map(({ name, id }) => (
+            <option key={`device-${id}`} value={id!}>
+              {name}
+            </option>
+          ))}
+      </Form.Select>
+      <Button onClick={loadDevices} className="flex-shrink-0">
+        Refresh devices
+      </Button>
+    </div>
+  );
+};
+
 const SectionHeader = (props: {
   loading: boolean;
   searchQuery?: string;
   setSearchQuery?: Dispatch<SetStateAction<string>>;
+  selectedDeviceId?: string;
+  setSelectedDeviceId?: Dispatch<SetStateAction<string>>;
+  sdk?: SpotifyApi;
   progressBarProps?: {
     numFullyLoaded: number;
     numLoaded: number;
     numTotal: number;
   };
 }) => {
-  const { loading, searchQuery, setSearchQuery, progressBarProps } = props;
+  const {
+    loading,
+    searchQuery,
+    setSearchQuery,
+    selectedDeviceId,
+    setSelectedDeviceId,
+    sdk,
+    progressBarProps,
+  } = props;
   const { numFullyLoaded, numLoaded, numTotal } = progressBarProps || {};
 
   let label;
@@ -118,6 +185,15 @@ const SectionHeader = (props: {
         <Col xs="auto">
           <h1>Your Playlists</h1>
         </Col>
+        <Col className="flex-grow-1" xs={6} md={4}>
+          <DeviceInput
+            selectedDeviceId={selectedDeviceId}
+            setSelectedDeviceId={setSelectedDeviceId}
+            sdk={sdk}
+          />
+        </Col>
+      </Row>
+      <Row className="d-flex justify-content-start mb-2 align-items-center">
         <Col>
           <Form.Control
             type="text"
@@ -143,20 +219,14 @@ type Props = {
   rememberedSnapshots: RememberedSnapshots;
   firstPlaylistPage: Page<SimplifiedPlaylist>;
   sdk: SpotifyApi;
-  selectedDeviceId: string;
   profile: UserProfile;
 };
 const Playlists = (props: Props) => {
-  const {
-    rememberedSnapshots,
-    firstPlaylistPage,
-    sdk,
-    selectedDeviceId,
-    profile,
-  } = props;
+  const { rememberedSnapshots, firstPlaylistPage, sdk, profile } = props;
 
   const { requestQueue, counts } = useBottleneck(SPOTIFY_BOTTLENECK_OPTIONS);
 
+  const [selectedDeviceId, setSelectedDeviceId] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [playlistsPages, setPlaylistsPages] = useState<
     Page<SimplifiedPlaylist>[]
@@ -465,6 +535,9 @@ const Playlists = (props: Props) => {
         loading={loading}
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
+        selectedDeviceId={selectedDeviceId}
+        setSelectedDeviceId={setSelectedDeviceId}
+        sdk={sdk}
         progressBarProps={{ numFullyLoaded, numLoaded, numTotal }}
       />
       {playlistsDetails && (
@@ -479,11 +552,7 @@ const Playlists = (props: Props) => {
   );
 };
 
-type DeferredPlaylistsProps = {
-  selectedDeviceId: string;
-};
-const DeferredPlaylists = (props: DeferredPlaylistsProps) => {
-  const { selectedDeviceId } = props;
+const DeferredPlaylists = () => {
   const { sdk, profile, playlistPage, rememberedSnapshots } =
     useLoaderData() as LoaderResponse;
 
@@ -499,7 +568,6 @@ const DeferredPlaylists = (props: DeferredPlaylistsProps) => {
             rememberedSnapshots={rememberedSnapshots}
             firstPlaylistPage={playlistPage}
             sdk={sdk}
-            selectedDeviceId={selectedDeviceId}
           />
         )}
       </Await>
