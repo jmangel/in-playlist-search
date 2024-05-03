@@ -215,13 +215,8 @@ export const loader: LoaderFunction = async ({ request }) => {
 };
 
 function HomePage() {
-  const {
-    sdk,
-    profile,
-    playlistPage,
-    rememberedSnapshots,
-    diskUsageEstimation,
-  } = useLoaderData() as LoaderResponse;
+  const { sdk, profile, playlistPage, rememberedSnapshots } =
+    useLoaderData() as LoaderResponse;
 
   const [selectedDeviceId, setSelectedDeviceId] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -305,23 +300,7 @@ function HomePage() {
           )}
         </Await>
       </Suspense>
-      <Suspense fallback={<></>}>
-        <Await resolve={diskUsageEstimation} errorElement={<></>}>
-          {(diskUsageEstimation) => {
-            if (!diskUsageEstimation) return <></>;
-
-            const { usage, quota } = diskUsageEstimation;
-            const usagePercentage = (usage / quota) * 100;
-
-            return (
-              <Alert variant="info">
-                Cached playlists are using {formatBytes(usage)} on disk,{' '}
-                {usagePercentage.toFixed(2)}% of this app's storage quota.
-              </Alert>
-            );
-          }}
-        </Await>
-      </Suspense>
+      <DiskUsageAlert />
     </>
   );
 }
@@ -398,6 +377,29 @@ const DevicesInput = (props: DevicesInputProps) => {
         Refresh devices
       </Button>
     </div>
+  );
+};
+
+const DiskUsageAlert = () => {
+  const { diskUsageEstimation } = useLoaderData() as LoaderResponse;
+  return (
+    <Suspense fallback={<></>}>
+      <Await resolve={diskUsageEstimation} errorElement={<></>}>
+        {(diskUsageEstimation) => {
+          if (!diskUsageEstimation) return <></>;
+
+          const { usage, quota } = diskUsageEstimation;
+          const usagePercentage = (usage / quota) * 100;
+
+          return (
+            <Alert variant="info">
+              Cached playlists are using {formatBytes(usage)} on disk,{' '}
+              {usagePercentage.toFixed(2)}% of this app's storage quota.
+            </Alert>
+          );
+        }}
+      </Await>
+    </Suspense>
   );
 };
 
