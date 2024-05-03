@@ -215,8 +215,7 @@ export const loader: LoaderFunction = async ({ request }) => {
 };
 
 function HomePage() {
-  const { sdk, profile, playlistPage, rememberedSnapshots } =
-    useLoaderData() as LoaderResponse;
+  const { sdk, profile } = useLoaderData() as LoaderResponse;
 
   const [selectedDeviceId, setSelectedDeviceId] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -266,40 +265,10 @@ function HomePage() {
           />
         </Col>
       </Row>
-      <Suspense
-        fallback={
-          <div>
-            <PlaylistsProgressBar
-              loading
-              numFullyLoaded={0}
-              numLoaded={0}
-              numTotal={1}
-              label="0 / loading..."
-            />
-          </div>
-        }
-      >
-        <Await
-          resolve={Promise.all([
-            rememberedSnapshots,
-            playlistPage,
-            sdk,
-            profile,
-          ])}
-          errorElement={<div>Error loading playlists</div>}
-        >
-          {([rememberedSnapshots, playlistPage, sdk, profile]) => (
-            <Playlists
-              selectedDeviceId={selectedDeviceId}
-              profile={profile}
-              rememberedSnapshots={rememberedSnapshots}
-              firstPlaylistPage={playlistPage}
-              sdk={sdk}
-              searchQuery={searchQuery}
-            />
-          )}
-        </Await>
-      </Suspense>
+      <DeferredPlaylists
+        searchQuery={searchQuery}
+        selectedDeviceId={selectedDeviceId}
+      />
       <DiskUsageAlert />
     </>
   );
@@ -377,6 +346,47 @@ const DevicesInput = (props: DevicesInputProps) => {
         Refresh devices
       </Button>
     </div>
+  );
+};
+
+const DeferredPlaylists = (props: {
+  selectedDeviceId: string;
+  searchQuery: string;
+}) => {
+  const { selectedDeviceId, searchQuery } = props;
+  const { sdk, profile, playlistPage, rememberedSnapshots } =
+    useLoaderData() as LoaderResponse;
+
+  return (
+    <Suspense
+      fallback={
+        <div>
+          <PlaylistsProgressBar
+            loading
+            numFullyLoaded={0}
+            numLoaded={0}
+            numTotal={1}
+            label="0 / loading..."
+          />
+        </div>
+      }
+    >
+      <Await
+        resolve={Promise.all([rememberedSnapshots, playlistPage, sdk, profile])}
+        errorElement={<div>Error loading playlists</div>}
+      >
+        {([rememberedSnapshots, playlistPage, sdk, profile]) => (
+          <Playlists
+            profile={profile}
+            rememberedSnapshots={rememberedSnapshots}
+            firstPlaylistPage={playlistPage}
+            sdk={sdk}
+            selectedDeviceId={selectedDeviceId}
+            searchQuery={searchQuery}
+          />
+        )}
+      </Await>
+    </Suspense>
   );
 };
 
