@@ -30,6 +30,10 @@ import PlaylistsProgressBar from './PlaylistsProgressBar';
 import { Await, useLoaderData } from 'react-router-dom';
 import { Col, Form, Row } from 'react-bootstrap';
 
+// unfortunately spotify can return an item that's just { track: null }
+// even though the sdk types don't specify this
+export type TracksItem = PlaylistedTrack<SpotifyTrack> | { track: null };
+
 export const SPOTIFY_GREEN = '#1DB954';
 
 export const SPOTIFY_RATE_LIMIT_WINDOW_SECONDS = 30;
@@ -56,14 +60,17 @@ const PLAYLIST_FIELDS = `name,owner(id,display_name),description,snapshot_id,tra
 const putTrackPageInDb = async (
   snapshotId: string,
   offset: number,
-  items: PlaylistedTrack<SpotifyTrack>[]
+  items: TracksItem[]
 ) => {
+  const presentItems = items.filter(
+    ({ track }) => !!track?.id
+  ) as PlaylistedTrack<SpotifyTrack>[];
+
   await playlistDatabase.artists.bulkPut(
-    items.flatMap(({ track: { artists } }) =>
+    presentItems.flatMap(({ track: { artists } }) =>
       artists.filter(({ id }) => !!id).map(({ id, name }) => ({ id, name }))
     )
   );
-  const presentItems = items.filter(({ track }) => !!track.id);
   await playlistDatabase.tracks.bulkPut(
     presentItems.map(({ track: { id, name, album, artists, uri } }) => ({
       id: id,
@@ -337,16 +344,24 @@ const Playlists = (props: Props) => {
                   uri,
                   spotifyUrl: external_urls.spotify,
                   owner: playlist.owner,
-                  tracks: playlist.tracks.items.map(
-                    ({ track: { id, name, album, artists, uri } }) => ({
-                      id,
-                      name,
-                      albumName: album.name,
-                      artistIds: artists.map(({ id }) => id),
-                      artists,
-                      uri,
+                  tracks: playlist.tracks.items
+                    .map((item: TracksItem) => {
+                      if (!item.track) return null;
+
+                      const {
+                        track: { id, name, album, artists, uri },
+                      } = item;
+
+                      return {
+                        id,
+                        name,
+                        albumName: album?.name,
+                        artistIds: artists?.map(({ id }) => id),
+                        artists,
+                        uri,
+                      };
                     })
-                  ),
+                    .filter(Boolean),
                 } as Snapshot;
 
                 setPlaylistsDetails((playlistsDetails) => ({
