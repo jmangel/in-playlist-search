@@ -215,26 +215,13 @@ export const loader: LoaderFunction = async ({ request }) => {
 };
 
 function HomePage() {
-  const { profile } = useLoaderData() as LoaderResponse;
-
   const [selectedDeviceId, setSelectedDeviceId] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
 
   return (
     <>
       <Row className="align-items-center mb-1">
-        <Suspense fallback={<div>Getting your profile info...</div>}>
-          <Await
-            resolve={profile}
-            errorElement={<div>Error loading your profile</div>}
-          >
-            {(profile) => (
-              <Col xs="auto">
-                <ProfileInfo profile={profile} />
-              </Col>
-            )}
-          </Await>
-        </Suspense>
+        <DeferredProfileInfo />
         <DeferredDeviceInput
           selectedDeviceId={selectedDeviceId}
           setSelectedDeviceId={setSelectedDeviceId}
@@ -252,6 +239,25 @@ function HomePage() {
     </>
   );
 }
+
+const DeferredProfileInfo = () => {
+  const { profile } = useLoaderData() as LoaderResponse;
+
+  return (
+    <Suspense fallback={<div>Getting your profile info...</div>}>
+      <Await
+        resolve={profile}
+        errorElement={<div>Error loading your profile</div>}
+      >
+        {(profile) => (
+          <Col xs="auto">
+            <ProfileInfo profile={profile} />
+          </Col>
+        )}
+      </Await>
+    </Suspense>
+  );
+};
 
 const ProfileInfo = (props: { profile: UserProfile }) => {
   const { profile } = props;
