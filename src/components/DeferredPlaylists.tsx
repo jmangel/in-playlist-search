@@ -146,7 +146,7 @@ const DeviceInput = (props: DeviceInputProps) => {
           ))}
       </Form.Select>
       <Button onClick={loadDevices} className="flex-shrink-0">
-        Refresh devices
+        Get devices
       </Button>
     </div>
   );
