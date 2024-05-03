@@ -2,10 +2,12 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import {
   Page,
+  PlaybackState,
   PlaylistedTrack,
   SimplifiedPlaylist,
   SpotifyApi,
   Track as SpotifyTrack,
+  UserProfile,
 } from '@spotify/web-api-ts-sdk';
 
 import { RememberedSnapshots, Snapshot } from '../pages/HomePage';
@@ -67,26 +69,27 @@ const putTrackPageInDb = async (
   await playlistDatabase.playlistSnapshots.update(snapshotId, updateObject);
 };
 
+function decodeHtml(input: string) {
+  var doc = new DOMParser().parseFromString(input, 'text/html');
+  return doc.documentElement.textContent;
+}
+
 type Props = {
-  playPlaylistTrack: (
-    playlistUri: string,
-    songUri: string,
-    offsetPosition: number
-  ) => void;
-  copySnapshot: (snapshot: Snapshot) => void;
   rememberedSnapshots: RememberedSnapshots;
   firstPlaylistPage: Page<SimplifiedPlaylist>;
-  sdk: SpotifyApi;
   searchQuery: string;
+  sdk: SpotifyApi;
+  selectedDeviceId: string;
+  profile: UserProfile;
 };
 const Playlists = (props: Props) => {
   const {
-    playPlaylistTrack,
-    copySnapshot,
     rememberedSnapshots,
     firstPlaylistPage,
     sdk,
     searchQuery,
+    selectedDeviceId,
+    profile,
   } = props;
 
   const { requestQueue, counts } = useBottleneck(SPOTIFY_BOTTLENECK_OPTIONS);
@@ -106,6 +109,92 @@ const Playlists = (props: Props) => {
   const [playlistsDetails, setPlaylistsDetails] = useState<{
     [playlistId: string]: Snapshot;
   }>();
+
+  const playPlaylistTrack = useCallback(
+    (playlistUri: string, songUri: string, offsetPosition: number) => {
+      if (!sdk) return;
+
+      if (window.navigator.vibrate) window.navigator.vibrate(20);
+
+      const playWithOffsetOptions = (offsetOptions: object) =>
+        sdk.player.startResumePlayback(
+          selectedDeviceId,
+          playlistUri,
+          undefined,
+          offsetOptions
+        );
+
+      const playViaPositionOffset = () =>
+        playWithOffsetOptions({
+          position: offsetPosition,
+        });
+
+      const playViaSongUri = () =>
+        playWithOffsetOptions({
+          uri: songUri,
+        });
+
+      const waitThenCheckPlaybackState = () =>
+        new Promise<PlaybackState>((resolve) => {
+          setTimeout(() => sdk.player.getPlaybackState().then(resolve), 1000);
+        });
+
+      // TODO: handle 404 device not found
+
+      // play from the position first, to force the device to load the playlist
+      // (if we play with the specific song uri and it isn't loaded,
+      // it will simply fail and the device won't load the playlist)
+      playViaPositionOffset().then(() =>
+        waitThenCheckPlaybackState().then((playbackState) => {
+          const { item } = playbackState;
+          if (item?.uri !== songUri) {
+            // wait 2 seconds to let the device refresh the playlist
+            setTimeout(() => {
+              playViaSongUri().then(() => {
+                // if songUri still isn't present on device, then spotify stops
+                // playing, but still returns 204, so again we have to check the
+                // playback state, and play via position offset if needed
+                waitThenCheckPlaybackState().then((playbackState) => {
+                  if (!playbackState?.is_playing) playViaPositionOffset();
+                });
+              });
+            }, 2000);
+          }
+        })
+      );
+    },
+    [sdk, selectedDeviceId]
+  );
+
+  const copySnapshot = useCallback(
+    (snapshot: Snapshot) => {
+      const { name, description, rememberedAt } = snapshot;
+
+      const rememberedDate = rememberedAt ? new Date(rememberedAt) : new Date();
+      let copiedDescription = `(copied on ${rememberedDate.toLocaleDateString(
+        undefined,
+        {
+          dateStyle: 'short',
+        }
+      )})`;
+      if (description) {
+        copiedDescription += ` - ${decodeHtml(description)}`;
+      }
+
+      sdk.playlists
+        .createPlaylist(profile.id, {
+          name,
+          description: copiedDescription,
+          public: false,
+          collaborative: false,
+        })
+        .then((playlist) => {
+          const trackUris = snapshot.tracks.map(({ uri }) => uri);
+          sdk.playlists.addItemsToPlaylist(playlist.id, trackUris);
+        });
+    },
+    [sdk, profile]
+  );
 
   const queueLoadTracksPage = useCallback(
     async (playlistId: string, offset = 0) => {

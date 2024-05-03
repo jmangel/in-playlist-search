@@ -13,7 +13,6 @@ import {
   AuthorizationCodeWithPKCEStrategy,
   Device,
   Page,
-  PlaybackState,
   SimplifiedPlaylist,
   SpotifyApi,
   UserProfile,
@@ -106,6 +105,14 @@ export const getSdk = async () => {
   }
 
   return sdk;
+};
+
+const formatBytes = (bytes: number) => {
+  if (bytes === 0) return '0 Bytes';
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 };
 
 export const loader: LoaderFunction = async ({ request }) => {
@@ -208,166 +215,135 @@ export const loader: LoaderFunction = async ({ request }) => {
 };
 
 function HomePage() {
-  const { sdk, profile } = useLoaderData() as LoaderResponse;
+  const {
+    sdk,
+    profile,
+    playlistPage,
+    rememberedSnapshots,
+    diskUsageEstimation,
+  } = useLoaderData() as LoaderResponse;
 
-  return (
-    <Suspense fallback={<div>Connecting to spotify...</div>}>
-      <Await
-        resolve={Promise.all([sdk, profile])}
-        errorElement={<div>Error connecting to spotify</div>}
-      >
-        {([sdk, profile]) => <Body sdk={sdk} profile={profile} />}
-      </Await>
-    </Suspense>
-  );
-}
-
-type BodyProps = {
-  sdk: SpotifyApi;
-  profile: UserProfile;
-};
-const Body = (props: BodyProps) => {
-  const { sdk, profile } = props;
   const [selectedDeviceId, setSelectedDeviceId] = useState('');
-
-  const playPlaylistTrack = useCallback(
-    (playlistUri: string, songUri: string, offsetPosition: number) => {
-      if (!sdk) return;
-
-      if (window.navigator.vibrate) window.navigator.vibrate(20);
-
-      const playWithOffsetOptions = (offsetOptions: object) =>
-        sdk.player.startResumePlayback(
-          selectedDeviceId,
-          playlistUri,
-          undefined,
-          offsetOptions
-        );
-
-      const playViaPositionOffset = () =>
-        playWithOffsetOptions({
-          position: offsetPosition,
-        });
-
-      const playViaSongUri = () =>
-        playWithOffsetOptions({
-          uri: songUri,
-        });
-
-      const waitThenCheckPlaybackState = () =>
-        new Promise<PlaybackState>((resolve) => {
-          setTimeout(() => sdk.player.getPlaybackState().then(resolve), 1000);
-        });
-
-      // TODO: handle 404 device not found
-
-      // play from the position first, to force the device to load the playlist
-      // (if we play with the specific song uri and it isn't loaded,
-      // it will simply fail and the device won't load the playlist)
-      playViaPositionOffset().then(() =>
-        waitThenCheckPlaybackState().then((playbackState) => {
-          const { item } = playbackState;
-          if (item?.uri !== songUri) {
-            // wait 2 seconds to let the device refresh the playlist
-            setTimeout(() => {
-              playViaSongUri().then(() => {
-                // if songUri still isn't present on device, then spotify stops
-                // playing, but still returns 204, so again we have to check the
-                // playback state, and play via position offset if needed
-                waitThenCheckPlaybackState().then((playbackState) => {
-                  if (!playbackState?.is_playing) playViaPositionOffset();
-                });
-              });
-            }, 2000);
-          }
-        })
-      );
-    },
-    [sdk, selectedDeviceId]
-  );
-
-  function decodeHtml(input: string) {
-    var doc = new DOMParser().parseFromString(input, 'text/html');
-    return doc.documentElement.textContent;
-  }
-
-  const copySnapshot = useCallback(
-    (snapshot: Snapshot) => {
-      const { name, description, rememberedAt } = snapshot;
-
-      const rememberedDate = rememberedAt ? new Date(rememberedAt) : new Date();
-      let copiedDescription = `(copied on ${rememberedDate.toLocaleDateString(
-        undefined,
-        {
-          dateStyle: 'short',
-        }
-      )})`;
-      if (description) {
-        copiedDescription += ` - ${decodeHtml(description)}`;
-      }
-
-      sdk.playlists
-        .createPlaylist(profile.id, {
-          name,
-          description: copiedDescription,
-          public: false,
-          collaborative: false,
-        })
-        .then((playlist) => {
-          const trackUris = snapshot.tracks.map(({ uri }) => uri);
-          sdk.playlists.addItemsToPlaylist(playlist.id, trackUris);
-        });
-    },
-    [sdk, profile]
-  );
+  const [searchQuery, setSearchQuery] = useState('');
 
   return (
     <>
       <Row className="align-items-center mb-1">
+        <Suspense fallback={<div>Getting your profile info...</div>}>
+          <Await
+            resolve={profile}
+            errorElement={<div>Error loading your profile</div>}
+          >
+            {(profile) => (
+              <Col xs="auto">
+                <ProfileInfo profile={profile} />
+              </Col>
+            )}
+          </Await>
+        </Suspense>
+        <Suspense fallback={<div>Connecting to spotify...</div>}>
+          <Await
+            resolve={sdk}
+            errorElement={<div>Error connecting to spotify</div>}
+          >
+            {(sdk) => (
+              <Col className="flex-grow-1" xs={6} md={4}>
+                <DevicesInput
+                  selectedDeviceId={selectedDeviceId}
+                  setSelectedDeviceId={setSelectedDeviceId}
+                  sdk={sdk}
+                />
+              </Col>
+            )}
+          </Await>
+        </Suspense>
+      </Row>
+      <Row className="d-flex justify-content-start mb-2 align-items-center">
         <Col xs="auto">
-          <ProfileInfo />
+          <h1>Your Playlists</h1>
         </Col>
-        <Col className="flex-grow-1" xs={6} md={4}>
-          <DevicesInput
-            selectedDeviceId={selectedDeviceId}
-            setSelectedDeviceId={setSelectedDeviceId}
-            sdk={sdk}
+        <Col>
+          <Form.Control
+            type="text"
+            placeholder="Search by song, artist, album, or playlist name or description"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value.toLowerCase())}
           />
         </Col>
       </Row>
-      <PlaylistsArea
-        playPlaylistTrack={playPlaylistTrack}
-        copySnapshot={copySnapshot}
-      />
-      <DiskUsageAlert />
+      <Suspense
+        fallback={
+          <div>
+            <PlaylistsProgressBar
+              loading
+              numFullyLoaded={0}
+              numLoaded={0}
+              numTotal={1}
+              label="0 / loading..."
+            />
+          </div>
+        }
+      >
+        <Await
+          resolve={Promise.all([
+            rememberedSnapshots,
+            playlistPage,
+            sdk,
+            profile,
+          ])}
+          errorElement={<div>Error loading playlists</div>}
+        >
+          {([rememberedSnapshots, playlistPage, sdk, profile]) => (
+            <Playlists
+              selectedDeviceId={selectedDeviceId}
+              profile={profile}
+              rememberedSnapshots={rememberedSnapshots}
+              firstPlaylistPage={playlistPage}
+              sdk={sdk}
+              searchQuery={searchQuery}
+            />
+          )}
+        </Await>
+      </Suspense>
+      <Suspense fallback={<></>}>
+        <Await resolve={diskUsageEstimation} errorElement={<></>}>
+          {(diskUsageEstimation) => {
+            if (!diskUsageEstimation) return <></>;
+
+            const { usage, quota } = diskUsageEstimation;
+            const usagePercentage = (usage / quota) * 100;
+
+            return (
+              <Alert variant="info">
+                Cached playlists are using {formatBytes(usage)} on disk,{' '}
+                {usagePercentage.toFixed(2)}% of this app's storage quota.
+              </Alert>
+            );
+          }}
+        </Await>
+      </Suspense>
     </>
   );
-};
+}
 
-const ProfileInfo = () => {
-  const { profile } = useLoaderData() as LoaderResponse;
+const ProfileInfo = (props: { profile: UserProfile }) => {
+  const { profile } = props;
+  const { display_name: name, external_urls: { spotify: url = '' } = {} } =
+    profile;
 
-  return (
-    <Suspense fallback={<div>Loading profile...</div>}>
-      <Await resolve={profile} errorElement={<div>Error loading profile</div>}>
-        {({ display_name: name, external_urls: { spotify: url = '' } = {} }) =>
-          name ? (
-            <h1 className="mb-0">
-              Logged in as{' '}
-              {url ? (
-                <a target="_blank" href={url} rel="noreferrer">
-                  {name}
-                </a>
-              ) : (
-                name
-              )}
-            </h1>
-          ) : (
-            <></>
-          )
-        }
-      </Await>
-    </Suspense>
+  return name ? (
+    <h1 className="mb-0">
+      Logged in as{' '}
+      {url ? (
+        <a target="_blank" href={url} rel="noreferrer">
+          {name}
+        </a>
+      ) : (
+        name
+      )}
+    </h1>
+  ) : (
+    <></>
   );
 };
 
@@ -422,100 +398,6 @@ const DevicesInput = (props: DevicesInputProps) => {
         Refresh devices
       </Button>
     </div>
-  );
-};
-
-type PlaylistsAreaProps = {
-  playPlaylistTrack: (
-    playlistUri: string,
-    songUri: string,
-    offsetPosition: number
-  ) => void;
-  copySnapshot: (snapshot: Snapshot) => void;
-};
-const PlaylistsArea = (props: PlaylistsAreaProps) => {
-  const { playPlaylistTrack, copySnapshot } = props;
-  const { rememberedSnapshots, playlistPage, sdk } =
-    useLoaderData() as LoaderResponse;
-  const [searchQuery, setSearchQuery] = useState('');
-
-  return (
-    <>
-      <Row className="d-flex justify-content-start mb-2 align-items-center">
-        <Col xs="auto">
-          <h1>Your Playlists</h1>
-        </Col>
-        <Col>
-          <Form.Control
-            type="text"
-            placeholder="Search by song, artist, album, or playlist name or description"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value.toLowerCase())}
-          />
-        </Col>
-      </Row>
-      <Suspense
-        fallback={
-          <div>
-            <PlaylistsProgressBar
-              loading
-              numFullyLoaded={0}
-              numLoaded={0}
-              numTotal={1}
-              label="0 / loading..."
-            />
-          </div>
-        }
-      >
-        <Await
-          resolve={Promise.all([rememberedSnapshots, playlistPage, sdk])}
-          errorElement={<div>Error loading playlists</div>}
-        >
-          {([rememberedSnapshots, playlistPage, sdk]) => (
-            <Playlists
-              playPlaylistTrack={playPlaylistTrack}
-              copySnapshot={copySnapshot}
-              rememberedSnapshots={rememberedSnapshots}
-              firstPlaylistPage={playlistPage}
-              sdk={sdk}
-              searchQuery={searchQuery}
-            />
-          )}
-        </Await>
-      </Suspense>
-    </>
-  );
-};
-
-const formatBytes = (bytes: number) => {
-  if (bytes === 0) return '0 Bytes';
-  const k = 1024;
-  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-};
-
-const DiskUsageAlert = () => {
-  const { diskUsageEstimation } = useLoaderData() as LoaderResponse;
-
-  return (
-    <Suspense fallback={<></>}>
-      <Await resolve={diskUsageEstimation} errorElement={<></>}>
-        {(diskUsageEstimation) => {
-          if (!diskUsageEstimation) return <></>;
-
-          const { usage, quota } = diskUsageEstimation;
-          const usagePercentage = (usage / quota) * 100;
-
-          return (
-            <Alert variant="info">
-              Cached playlists are using {formatBytes(usage)} on disk,{' '}
-              {usagePercentage.toFixed(2)}% of this app's storage quota.
-            </Alert>
-          );
-        }}
-      </Await>
-    </Suspense>
   );
 };
 
