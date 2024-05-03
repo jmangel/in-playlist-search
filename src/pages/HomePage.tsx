@@ -1,7 +1,7 @@
-import { Suspense, useState } from 'react';
-import { Await, LoaderFunction, defer, useLoaderData } from 'react-router-dom';
+import { useState } from 'react';
+import { LoaderFunction, defer } from 'react-router-dom';
 
-import { Alert, Row } from 'react-bootstrap';
+import { Row } from 'react-bootstrap';
 import {
   AuthorizationCodeWithPKCEStrategy,
   Page,
@@ -15,6 +15,7 @@ import { Artist, Playlist, playlistDatabase, Track as DBTrack } from '../db';
 import DeferredDeviceInput from '../components/DefferedDeviceInput';
 import DeferredProfileInfo from '../components/DeferredProfileInfo';
 import PlaylistsSectionHeader from '../components/PlaylistsSectionHeader';
+import DiskUsageAlert from '../components/DiskUsageAlert';
 
 const clientId = process.env.REACT_APP_CLIENT_ID || '';
 const redirectUrl = `${process.env.REACT_APP_HOST_URI}/callback`;
@@ -99,14 +100,6 @@ export const getSdk = async () => {
   }
 
   return sdk;
-};
-
-const formatBytes = (bytes: number) => {
-  if (bytes === 0) return '0 Bytes';
-  const k = 1024;
-  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 };
 
 export const loader: LoaderFunction = async ({ request }) => {
@@ -233,28 +226,5 @@ function HomePage() {
     </>
   );
 }
-
-const DiskUsageAlert = () => {
-  const { diskUsageEstimation } = useLoaderData() as LoaderResponse;
-  return (
-    <Suspense fallback={<></>}>
-      <Await resolve={diskUsageEstimation} errorElement={<></>}>
-        {(diskUsageEstimation) => {
-          if (!diskUsageEstimation) return <></>;
-
-          const { usage, quota } = diskUsageEstimation;
-          const usagePercentage = (usage / quota) * 100;
-
-          return (
-            <Alert variant="info">
-              Cached playlists are using {formatBytes(usage)} on disk,{' '}
-              {usagePercentage.toFixed(2)}% of this app's storage quota.
-            </Alert>
-          );
-        }}
-      </Await>
-    </Suspense>
-  );
-};
 
 export default HomePage;
