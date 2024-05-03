@@ -252,19 +252,10 @@ function HomePage() {
           </Await>
         </Suspense>
       </Row>
-      <Row className="d-flex justify-content-start mb-2 align-items-center">
-        <Col xs="auto">
-          <h1>Your Playlists</h1>
-        </Col>
-        <Col>
-          <Form.Control
-            type="text"
-            placeholder="Search by song, artist, album, or playlist name or description"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value.toLowerCase())}
-          />
-        </Col>
-      </Row>
+      <PlaylistsHeader
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+      />
       <DeferredPlaylists
         searchQuery={searchQuery}
         selectedDeviceId={selectedDeviceId}
@@ -346,6 +337,28 @@ const DevicesInput = (props: DevicesInputProps) => {
         Refresh devices
       </Button>
     </div>
+  );
+};
+
+const PlaylistsHeader = (props: {
+  searchQuery: string;
+  setSearchQuery: Dispatch<SetStateAction<string>>;
+}) => {
+  const { searchQuery, setSearchQuery } = props;
+  return (
+    <Row className="d-flex justify-content-start mb-2 align-items-center">
+      <Col xs="auto">
+        <h1>Your Playlists</h1>
+      </Col>
+      <Col>
+        <Form.Control
+          type="text"
+          placeholder="Search by song, artist, album, or playlist name or description"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value.toLowerCase())}
+        />
+      </Col>
+    </Row>
   );
 };
 
