@@ -12,7 +12,7 @@ import {
 
 import DeferredPlaylists from '../components/DeferredPlaylists';
 import { Artist, Playlist, playlistDatabase, Track as DBTrack } from '../db';
-import DeferredDeviceInput from '../components/DefferedDeviceInput';
+import DeferredDeviceInput from '../components/DeferredDeviceInput';
 import DeferredProfileInfo from '../components/DeferredProfileInfo';
 import DiskUsageAlert from '../components/DiskUsageAlert';
 
