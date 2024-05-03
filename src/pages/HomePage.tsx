@@ -1,7 +1,7 @@
-import { Dispatch, SetStateAction, Suspense, useState } from 'react';
+import { Suspense, useState } from 'react';
 import { Await, LoaderFunction, defer, useLoaderData } from 'react-router-dom';
 
-import { Alert, Col, Form, Row } from 'react-bootstrap';
+import { Alert, Row } from 'react-bootstrap';
 import {
   AuthorizationCodeWithPKCEStrategy,
   Page,
@@ -14,6 +14,7 @@ import DeferredPlaylists from '../components/DeferredPlaylists';
 import { Artist, Playlist, playlistDatabase, Track as DBTrack } from '../db';
 import DeferredDeviceInput from '../components/DefferedDeviceInput';
 import DeferredProfileInfo from '../components/DeferredProfileInfo';
+import PlaylistsSectionHeader from '../components/PlaylistsSectionHeader';
 
 const clientId = process.env.REACT_APP_CLIENT_ID || '';
 const redirectUrl = `${process.env.REACT_APP_HOST_URI}/callback`;
@@ -220,7 +221,7 @@ function HomePage() {
           setSelectedDeviceId={setSelectedDeviceId}
         />
       </Row>
-      <PlaylistsHeader
+      <PlaylistsSectionHeader
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
       />
@@ -232,28 +233,6 @@ function HomePage() {
     </>
   );
 }
-
-const PlaylistsHeader = (props: {
-  searchQuery: string;
-  setSearchQuery: Dispatch<SetStateAction<string>>;
-}) => {
-  const { searchQuery, setSearchQuery } = props;
-  return (
-    <Row className="d-flex justify-content-start mb-2 align-items-center">
-      <Col xs="auto">
-        <h1>Your Playlists</h1>
-      </Col>
-      <Col>
-        <Form.Control
-          type="text"
-          placeholder="Search by song, artist, album, or playlist name or description"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value.toLowerCase())}
-        />
-      </Col>
-    </Row>
-  );
-};
 
 const DiskUsageAlert = () => {
   const { diskUsageEstimation } = useLoaderData() as LoaderResponse;
