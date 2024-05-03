@@ -3,7 +3,7 @@ import { useLoaderData } from 'react-router-dom';
 import { MouseEventHandler, useMemo, useState } from 'react';
 import { Button, Dropdown, Form } from 'react-bootstrap';
 import * as DOMPurify from 'dompurify';
-import { SPOTIFY_GREEN } from './Playlists';
+import { SPOTIFY_GREEN } from './DeferredPlaylists';
 import { Snapshot, Track } from '../pages/HomePage';
 
 const DEFAULT_DOMPURIFY_URI_REGEX =

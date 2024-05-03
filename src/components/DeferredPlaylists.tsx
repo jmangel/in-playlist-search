@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 
 import {
   Page,
@@ -10,11 +10,16 @@ import {
   UserProfile,
 } from '@spotify/web-api-ts-sdk';
 
-import { RememberedSnapshots, Snapshot } from '../pages/HomePage';
+import {
+  LoaderResponse,
+  RememberedSnapshots,
+  Snapshot,
+} from '../pages/HomePage';
 import useBottleneck from '../hooks/useBottleneck';
 import { playlistDatabase } from '../db';
 import PlaylistsTable from './PlaylistsTable';
 import PlaylistsProgressBar from './PlaylistsProgressBar';
+import { Await, useLoaderData } from 'react-router-dom';
 
 export const SPOTIFY_GREEN = '#1DB954';
 
@@ -398,4 +403,46 @@ const Playlists = (props: Props) => {
   );
 };
 
-export default Playlists;
+type DeferredPlaylistsProps = {
+  selectedDeviceId: string;
+  searchQuery: string;
+};
+const DeferredPlaylists = (props: DeferredPlaylistsProps) => {
+  const { selectedDeviceId, searchQuery } = props;
+  const { sdk, profile, playlistPage, rememberedSnapshots } =
+    useLoaderData() as LoaderResponse;
+
+  return (
+    <Suspense
+      fallback={
+        <div>
+          <PlaylistsProgressBar
+            loading
+            numFullyLoaded={0}
+            numLoaded={0}
+            numTotal={1}
+            label="0 / loading..."
+          />
+        </div>
+      }
+    >
+      <Await
+        resolve={Promise.all([rememberedSnapshots, playlistPage, sdk, profile])}
+        errorElement={<div>Error loading playlists</div>}
+      >
+        {([rememberedSnapshots, playlistPage, sdk, profile]) => (
+          <Playlists
+            profile={profile}
+            rememberedSnapshots={rememberedSnapshots}
+            firstPlaylistPage={playlistPage}
+            sdk={sdk}
+            selectedDeviceId={selectedDeviceId}
+            searchQuery={searchQuery}
+          />
+        )}
+      </Await>
+    </Suspense>
+  );
+};
+
+export default DeferredPlaylists;

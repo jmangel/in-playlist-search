@@ -18,9 +18,8 @@ import {
   UserProfile,
 } from '@spotify/web-api-ts-sdk';
 
-import Playlists from '../components/Playlists';
+import DeferredPlaylists from '../components/DeferredPlaylists';
 import { Artist, Playlist, playlistDatabase, Track as DBTrack } from '../db';
-import PlaylistsProgressBar from '../components/PlaylistsProgressBar';
 
 const clientId = process.env.REACT_APP_CLIENT_ID || '';
 const redirectUrl = `${process.env.REACT_APP_HOST_URI}/callback`;
@@ -379,47 +378,6 @@ const PlaylistsHeader = (props: {
         />
       </Col>
     </Row>
-  );
-};
-
-const DeferredPlaylists = (props: {
-  selectedDeviceId: string;
-  searchQuery: string;
-}) => {
-  const { selectedDeviceId, searchQuery } = props;
-  const { sdk, profile, playlistPage, rememberedSnapshots } =
-    useLoaderData() as LoaderResponse;
-
-  return (
-    <Suspense
-      fallback={
-        <div>
-          <PlaylistsProgressBar
-            loading
-            numFullyLoaded={0}
-            numLoaded={0}
-            numTotal={1}
-            label="0 / loading..."
-          />
-        </div>
-      }
-    >
-      <Await
-        resolve={Promise.all([rememberedSnapshots, playlistPage, sdk, profile])}
-        errorElement={<div>Error loading playlists</div>}
-      >
-        {([rememberedSnapshots, playlistPage, sdk, profile]) => (
-          <Playlists
-            profile={profile}
-            rememberedSnapshots={rememberedSnapshots}
-            firstPlaylistPage={playlistPage}
-            sdk={sdk}
-            selectedDeviceId={selectedDeviceId}
-            searchQuery={searchQuery}
-          />
-        )}
-      </Await>
-    </Suspense>
   );
 };
 
