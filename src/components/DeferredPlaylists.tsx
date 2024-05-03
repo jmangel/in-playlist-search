@@ -181,11 +181,11 @@ const SectionHeader = (props: {
 
   return (
     <>
-      <Row className="d-flex justify-content-start align-items-center">
+      <Row className="d-flex justify-content-start align-items-center gy-2">
         <Col xs="auto">
           <h1 className="mb-0">Your Playlists</h1>
         </Col>
-        <Col className="flex-grow-1" xs={6} md={4}>
+        <Col className="flex-grow-1" xs={8} md={4}>
           <DeviceInput
             selectedDeviceId={selectedDeviceId}
             setSelectedDeviceId={setSelectedDeviceId}
