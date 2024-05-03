@@ -1,6 +1,6 @@
 import { LoaderFunction, defer } from 'react-router-dom';
 
-import { Row } from 'react-bootstrap';
+import { Col, Row } from 'react-bootstrap';
 import {
   AuthorizationCodeWithPKCEStrategy,
   Page,
@@ -201,13 +201,13 @@ export const loader: LoaderFunction = async ({ request }) => {
 
 function HomePage() {
   return (
-    <>
-      <Row className="align-items-center mb-1">
+    <Col className="d-grid gap-2">
+      <Row className="align-items-center">
         <DeferredProfileInfo />
       </Row>
       <DeferredPlaylists />
       <DiskUsageAlert />
-    </>
+    </Col>
   );
 }
 

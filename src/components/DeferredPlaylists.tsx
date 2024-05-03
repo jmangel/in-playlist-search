@@ -181,9 +181,9 @@ const SectionHeader = (props: {
 
   return (
     <>
-      <Row className="d-flex justify-content-start mb-2 align-items-center">
+      <Row className="d-flex justify-content-start align-items-center">
         <Col xs="auto">
-          <h1>Your Playlists</h1>
+          <h1 className="mb-0">Your Playlists</h1>
         </Col>
         <Col className="flex-grow-1" xs={6} md={4}>
           <DeviceInput
@@ -193,7 +193,7 @@ const SectionHeader = (props: {
           />
         </Col>
       </Row>
-      <Row className="d-flex justify-content-start mb-2 align-items-center">
+      <Row className="d-flex justify-content-start align-items-center">
         <Col>
           <Form.Control
             type="text"
