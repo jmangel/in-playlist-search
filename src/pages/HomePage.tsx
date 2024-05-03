@@ -14,7 +14,6 @@ import DeferredPlaylists from '../components/DeferredPlaylists';
 import { Artist, Playlist, playlistDatabase, Track as DBTrack } from '../db';
 import DeferredDeviceInput from '../components/DefferedDeviceInput';
 import DeferredProfileInfo from '../components/DeferredProfileInfo';
-import PlaylistsSectionHeader from '../components/PlaylistsSectionHeader';
 import DiskUsageAlert from '../components/DiskUsageAlert';
 
 const clientId = process.env.REACT_APP_CLIENT_ID || '';
@@ -203,7 +202,6 @@ export const loader: LoaderFunction = async ({ request }) => {
 
 function HomePage() {
   const [selectedDeviceId, setSelectedDeviceId] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
 
   return (
     <>
@@ -214,14 +212,7 @@ function HomePage() {
           setSelectedDeviceId={setSelectedDeviceId}
         />
       </Row>
-      <PlaylistsSectionHeader
-        searchQuery={searchQuery}
-        setSearchQuery={setSearchQuery}
-      />
-      <DeferredPlaylists
-        searchQuery={searchQuery}
-        selectedDeviceId={selectedDeviceId}
-      />
+      <DeferredPlaylists selectedDeviceId={selectedDeviceId} />
       <DiskUsageAlert />
     </>
   );

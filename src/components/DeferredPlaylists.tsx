@@ -1,4 +1,12 @@
-import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  Dispatch,
+  SetStateAction,
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 
 import {
   Page,
@@ -20,6 +28,7 @@ import { playlistDatabase } from '../db';
 import PlaylistsTable from './PlaylistsTable';
 import PlaylistsProgressBar from './PlaylistsProgressBar';
 import { Await, useLoaderData } from 'react-router-dom';
+import { Col, Form, Row } from 'react-bootstrap';
 
 export const SPOTIFY_GREEN = '#1DB954';
 
@@ -79,10 +88,52 @@ function decodeHtml(input: string) {
   return doc.documentElement.textContent;
 }
 
+const SectionHeader = (props: {
+  loading: boolean;
+  searchQuery?: string;
+  setSearchQuery?: Dispatch<SetStateAction<string>>;
+  progressBarProps?: {
+    numFullyLoaded: number;
+    numLoaded: number;
+    numTotal: number;
+  };
+}) => {
+  const { loading, searchQuery, setSearchQuery, progressBarProps } = props;
+  const { numFullyLoaded, numLoaded, numTotal } = progressBarProps || {};
+
+  let label;
+  if (!progressBarProps) label = '0 / loading...';
+
+  return (
+    <>
+      <Row className="d-flex justify-content-start mb-2 align-items-center">
+        <Col xs="auto">
+          <h1>Your Playlists</h1>
+        </Col>
+        <Col>
+          <Form.Control
+            type="text"
+            placeholder="Search by song, artist, album, or playlist name or description"
+            value={searchQuery}
+            disabled={!setSearchQuery}
+            onChange={(e) => setSearchQuery?.(e.target.value.toLowerCase())}
+          />
+        </Col>
+      </Row>
+      <PlaylistsProgressBar
+        loading={loading}
+        numFullyLoaded={numFullyLoaded || 0}
+        numLoaded={numLoaded || 0}
+        numTotal={numTotal || 1}
+        label={label}
+      />
+    </>
+  );
+};
+
 type Props = {
   rememberedSnapshots: RememberedSnapshots;
   firstPlaylistPage: Page<SimplifiedPlaylist>;
-  searchQuery: string;
   sdk: SpotifyApi;
   selectedDeviceId: string;
   profile: UserProfile;
@@ -92,13 +143,13 @@ const Playlists = (props: Props) => {
     rememberedSnapshots,
     firstPlaylistPage,
     sdk,
-    searchQuery,
     selectedDeviceId,
     profile,
   } = props;
 
   const { requestQueue, counts } = useBottleneck(SPOTIFY_BOTTLENECK_OPTIONS);
 
+  const [searchQuery, setSearchQuery] = useState('');
   const [playlistsPages, setPlaylistsPages] = useState<
     Page<SimplifiedPlaylist>[]
   >([]);
@@ -385,11 +436,11 @@ const Playlists = (props: Props) => {
 
   return (
     <>
-      <PlaylistsProgressBar
+      <SectionHeader
         loading={loading}
-        numFullyLoaded={numFullyLoaded}
-        numLoaded={numLoaded}
-        numTotal={numTotal}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        progressBarProps={{ numFullyLoaded, numLoaded, numTotal }}
       />
       {playlistsDetails && (
         <PlaylistsTable
@@ -405,27 +456,14 @@ const Playlists = (props: Props) => {
 
 type DeferredPlaylistsProps = {
   selectedDeviceId: string;
-  searchQuery: string;
 };
 const DeferredPlaylists = (props: DeferredPlaylistsProps) => {
-  const { selectedDeviceId, searchQuery } = props;
+  const { selectedDeviceId } = props;
   const { sdk, profile, playlistPage, rememberedSnapshots } =
     useLoaderData() as LoaderResponse;
 
   return (
-    <Suspense
-      fallback={
-        <div>
-          <PlaylistsProgressBar
-            loading
-            numFullyLoaded={0}
-            numLoaded={0}
-            numTotal={1}
-            label="0 / loading..."
-          />
-        </div>
-      }
-    >
+    <Suspense fallback={<SectionHeader loading />}>
       <Await
         resolve={Promise.all([rememberedSnapshots, playlistPage, sdk, profile])}
         errorElement={<div>Error loading playlists</div>}
@@ -437,7 +475,6 @@ const DeferredPlaylists = (props: DeferredPlaylistsProps) => {
             firstPlaylistPage={playlistPage}
             sdk={sdk}
             selectedDeviceId={selectedDeviceId}
-            searchQuery={searchQuery}
           />
         )}
       </Await>
