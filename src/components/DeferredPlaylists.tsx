@@ -22,6 +22,7 @@ import {
   LoaderResponse,
   RememberedSnapshots,
   Snapshot,
+  Track,
 } from '../pages/HomePage';
 import useBottleneck from '../hooks/useBottleneck';
 import { playlistDatabase } from '../db';
@@ -346,7 +347,16 @@ const Playlists = (props: Props) => {
                   owner: playlist.owner,
                   tracks: playlist.tracks.items
                     .map((item: TracksItem) => {
-                      if (!item.track) return null;
+                      if (!item.track)
+                        return {
+                          id: '',
+                          name: '',
+                          albumName: '',
+                          artistIds: [],
+                          uri: '',
+                          artists: [],
+                          missingFromSpotify: true,
+                        } as Track;
 
                       const {
                         track: { id, name, album, artists, uri },

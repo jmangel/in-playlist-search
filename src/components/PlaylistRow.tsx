@@ -46,14 +46,16 @@ const IndexTableRowWithLinkButton = ({
   <td>
     <div className="d-flex justify-content-end">
       {index + 1}
-      <Button
-        variant="link"
-        onClick={onClick}
-        disabled={disabled}
-        className="lh-sm p-0 ps-1"
-      >
-        <i className={`bi bi-${iconName} ${className}`} />
-      </Button>
+      {onClick && (
+        <Button
+          variant="link"
+          onClick={onClick}
+          disabled={disabled}
+          className="lh-sm p-0 ps-1"
+        >
+          <i className={`bi bi-${iconName} ${className}`} />
+        </Button>
+      )}
     </div>
     {actions && <div className="d-flex justify-content-end">{actions}</div>}
   </td>
@@ -112,14 +114,20 @@ const PlaylistRow = (props: Props) => {
           return (
             <tr
               key={track.id || track.uri}
-              className={!isMatching ? 'small fst-italic fw-lighter' : ''}
+              className={
+                !isMatching || track.missingFromSpotify
+                  ? 'small fst-italic fw-lighter'
+                  : ''
+              }
             >
               <IndexTableRowWithLinkButton
                 index={index}
                 iconName="play-circle-fill"
                 className="text-success"
-                onClick={() =>
-                  playPlaylistTrack(playlist.uri, track.uri, index)
+                onClick={
+                  track.missingFromSpotify
+                    ? undefined
+                    : () => playPlaylistTrack(playlist.uri, track.uri, index)
                 }
               />
               <td colSpan={1}>{track.name}</td>

@@ -36,6 +36,7 @@ export type Track = {
   albumName: string;
   artistIds: string[];
   uri: string;
+  missingFromSpotify?: boolean;
 };
 export type Snapshot = {
   owner: {
