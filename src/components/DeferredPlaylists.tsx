@@ -287,7 +287,7 @@ const Playlists = (props: Props) => {
         </div>
       );
 
-      toast(`Starting playlist from track ${offsetPosition + 1}...`, {
+      toast.info(`Starting playlist from track ${offsetPosition + 1}...`, {
         autoClose: TOAST_AUTO_CLOSE,
         closeButton: CloseOrQuitButton,
       });
@@ -332,7 +332,7 @@ const Playlists = (props: Props) => {
                 if (item?.uri !== songUri) {
                   if (!keepTrying) return;
 
-                  toast(
+                  toast.warning(
                     "Currently playing song doesn't match, trying again after waiting for playlist to refresh on device...",
                     {
                       autoClose: TOAST_AUTO_CLOSE,
@@ -343,7 +343,7 @@ const Playlists = (props: Props) => {
                   setTimeout(() => {
                     if (!keepTrying) return;
 
-                    toast('Playing song...', {
+                    toast.info('Playing song...', {
                       autoClose: TOAST_AUTO_CLOSE,
                       closeButton: CloseOrQuitButton,
                     });
@@ -354,7 +354,7 @@ const Playlists = (props: Props) => {
                       keepTrying &&
                         waitThenCheckPlaybackState().then((playbackState) => {
                           if (!playbackState?.is_playing && keepTrying) {
-                            toast(
+                            toast.error(
                               `Song still doesn't match, done trying, starting playlist from track ${
                                 offsetPosition + 1
                               } instead...`,
