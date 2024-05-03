@@ -13,6 +13,7 @@ import {
 import DeferredPlaylists from '../components/DeferredPlaylists';
 import { Artist, Playlist, playlistDatabase, Track as DBTrack } from '../db';
 import DeferredDeviceInput from '../components/DefferedDeviceInput';
+import DeferredProfileInfo from '../components/DeferredProfileInfo';
 
 const clientId = process.env.REACT_APP_CLIENT_ID || '';
 const redirectUrl = `${process.env.REACT_APP_HOST_URI}/callback`;
@@ -231,46 +232,6 @@ function HomePage() {
     </>
   );
 }
-
-const DeferredProfileInfo = () => {
-  const { profile } = useLoaderData() as LoaderResponse;
-
-  return (
-    <Suspense fallback={<div>Getting your profile info...</div>}>
-      <Await
-        resolve={profile}
-        errorElement={<div>Error loading your profile</div>}
-      >
-        {(profile) => (
-          <Col xs="auto">
-            <ProfileInfo profile={profile} />
-          </Col>
-        )}
-      </Await>
-    </Suspense>
-  );
-};
-
-const ProfileInfo = (props: { profile: UserProfile }) => {
-  const { profile } = props;
-  const { display_name: name, external_urls: { spotify: url = '' } = {} } =
-    profile;
-
-  return name ? (
-    <h1 className="mb-0">
-      Logged in as{' '}
-      {url ? (
-        <a target="_blank" href={url} rel="noreferrer">
-          {name}
-        </a>
-      ) : (
-        name
-      )}
-    </h1>
-  ) : (
-    <></>
-  );
-};
 
 const PlaylistsHeader = (props: {
   searchQuery: string;
