@@ -265,7 +265,6 @@ const Playlists = (props: Props) => {
       const ToastWithQuitButton = ({ content }: { content: string }) => (
         <div>
           {content}
-          {keepTrying ? 'still trying' : 'done trying'}
           <Button onClick={() => (keepTrying = false)}>Stop Trying</Button>
         </div>
       );
