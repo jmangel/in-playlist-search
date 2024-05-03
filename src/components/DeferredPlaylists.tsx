@@ -1,6 +1,7 @@
 import {
   ChangeEvent,
   Dispatch,
+  MouseEventHandler,
   SetStateAction,
   Suspense,
   useCallback,
@@ -262,21 +263,34 @@ const Playlists = (props: Props) => {
     (playlistUri: string, songUri: string, offsetPosition: number) => {
       let keepTrying = true;
 
-      const ToastWithQuitButton = ({ content }: { content: string }) => (
-        <div>
-          {content}
-          <Button onClick={() => (keepTrying = false)}>Stop Trying</Button>
+      const CloseOrQuitButton = ({
+        closeToast,
+      }: {
+        closeToast: MouseEventHandler<HTMLButtonElement>;
+      }) => (
+        <div className="d-flex flex-column justify-content-between">
+          <button
+            className="Toastify__close-button Toastify__close-button--light"
+            onClick={closeToast}
+          >
+            <i className="bi bi-x fs-5" />
+          </button>
+          <button
+            className="Toastify__close-button Toastify__close-button--light"
+            onClick={(e) => {
+              keepTrying = false;
+              closeToast(e);
+            }}
+          >
+            <i className="bi bi-x-octagon fs-5" />
+          </button>
         </div>
       );
 
-      toast(
-        <ToastWithQuitButton
-          content={`Starting playlist from track ${offsetPosition + 1}...`}
-        />,
-        {
-          autoClose: TOAST_AUTO_CLOSE,
-        }
-      );
+      toast(`Starting playlist from track ${offsetPosition + 1}...`, {
+        autoClose: TOAST_AUTO_CLOSE,
+        closeButton: CloseOrQuitButton,
+      });
 
       if (!sdk) return;
 
@@ -319,15 +333,19 @@ const Playlists = (props: Props) => {
                   if (!keepTrying) return;
 
                   toast(
-                    <ToastWithQuitButton content="Currently playing song doesn't match, trying again after waiting for playlist to refresh on device..." />,
-                    { autoClose: TOAST_AUTO_CLOSE }
+                    "Currently playing song doesn't match, trying again after waiting for playlist to refresh on device...",
+                    {
+                      autoClose: TOAST_AUTO_CLOSE,
+                      closeButton: CloseOrQuitButton,
+                    }
                   );
                   // wait 2 seconds to let the device refresh the playlist
                   setTimeout(() => {
                     if (!keepTrying) return;
 
-                    toast(<ToastWithQuitButton content="Playing song..." />, {
+                    toast('Playing song...', {
                       autoClose: TOAST_AUTO_CLOSE,
+                      closeButton: CloseOrQuitButton,
                     });
                     playViaSongUri().then(() => {
                       // if songUri still isn't present on device, then spotify stops
