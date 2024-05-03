@@ -1,4 +1,5 @@
 import {
+  ChangeEvent,
   Dispatch,
   SetStateAction,
   Suspense,
@@ -31,6 +32,7 @@ import PlaylistsTable from './PlaylistsTable';
 import PlaylistsProgressBar from './PlaylistsProgressBar';
 import { Await, useLoaderData } from 'react-router-dom';
 import { Button, Col, Form, Row } from 'react-bootstrap';
+import { throttle } from 'lodash';
 
 // unfortunately spotify can return an item that's just { track: null }
 // even though the sdk types don't specify this
@@ -179,6 +181,15 @@ const SectionHeader = (props: {
   let label;
   if (!progressBarProps) label = '0 / loading...';
 
+  const debouncedSetSearchQuery = useMemo(() => {
+    if (!setSearchQuery) return () => undefined;
+    return throttle(setSearchQuery, 250, { leading: true });
+  }, [setSearchQuery]);
+
+  const onChange = (e: ChangeEvent<HTMLInputElement>) => {
+    debouncedSetSearchQuery(e.target.value.toLowerCase());
+  };
+
   return (
     <>
       <Row className="d-flex justify-content-start align-items-center gy-2">
@@ -198,9 +209,9 @@ const SectionHeader = (props: {
           <Form.Control
             type="text"
             placeholder="Search by song, artist, album, or playlist name or description"
-            value={searchQuery}
+            defaultValue={searchQuery}
             disabled={!setSearchQuery}
-            onChange={(e) => setSearchQuery?.(e.target.value.toLowerCase())}
+            onChange={onChange}
           />
         </Col>
       </Row>
