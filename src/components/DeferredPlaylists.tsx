@@ -33,6 +33,7 @@ import PlaylistsProgressBar from './PlaylistsProgressBar';
 import { Await, useLoaderData } from 'react-router-dom';
 import { Button, Col, Form, Row } from 'react-bootstrap';
 import { throttle } from 'lodash';
+import { toast } from 'react-toastify';
 
 // unfortunately spotify can return an item that's just { track: null }
 // even though the sdk types don't specify this
@@ -60,6 +61,8 @@ const REQUEST_QUEUE_PRIORITIES = {
 const PLAYLIST_ITEMS_FIELDS = 'track(id,name,uri,album(name)))';
 const PLAYLIST_TRACKS_FIELDS = `offset,limit,items(track(artists(id,name)),${PLAYLIST_ITEMS_FIELDS}`;
 const PLAYLIST_FIELDS = `name,owner(id,display_name),description,snapshot_id,tracks(total,offset,limit),tracks.items(track(artists(id,name)),${PLAYLIST_ITEMS_FIELDS}`;
+
+const TOAST_AUTO_CLOSE = 3000;
 
 const putTrackPageInDb = async (
   snapshotId: string,
@@ -257,6 +260,10 @@ const Playlists = (props: Props) => {
 
   const playPlaylistTrack = useCallback(
     (playlistUri: string, songUri: string, offsetPosition: number) => {
+      toast(`Starting playlist from track ${offsetPosition + 1}...`, {
+        autoClose: TOAST_AUTO_CLOSE,
+      });
+
       if (!sdk) return;
 
       if (window.navigator.vibrate) window.navigator.vibrate(20);
@@ -293,14 +300,29 @@ const Playlists = (props: Props) => {
         waitThenCheckPlaybackState().then((playbackState) => {
           const { item } = playbackState;
           if (item?.uri !== songUri) {
+            toast(
+              "Currently playing song doesn't match, trying again after waiting for playlist to refresh on device...",
+              { autoClose: TOAST_AUTO_CLOSE }
+            );
             // wait 2 seconds to let the device refresh the playlist
             setTimeout(() => {
+              toast('Playing song...', {
+                autoClose: TOAST_AUTO_CLOSE,
+              });
               playViaSongUri().then(() => {
                 // if songUri still isn't present on device, then spotify stops
                 // playing, but still returns 204, so again we have to check the
                 // playback state, and play via position offset if needed
                 waitThenCheckPlaybackState().then((playbackState) => {
-                  if (!playbackState?.is_playing) playViaPositionOffset();
+                  if (!playbackState?.is_playing) {
+                    toast(
+                      `Song still doesn't match, done trying, starting playlist from track ${
+                        offsetPosition + 1
+                      } instead...`,
+                      { autoClose: TOAST_AUTO_CLOSE }
+                    );
+                    playViaPositionOffset();
+                  }
                 });
               });
             }, 2000);

@@ -9,10 +9,13 @@ import {
   UserProfile,
 } from '@spotify/web-api-ts-sdk';
 
+import 'react-toastify/dist/ReactToastify.css';
+
 import DeferredPlaylists from '../components/DeferredPlaylists';
 import { Artist, Playlist, playlistDatabase, Track as DBTrack } from '../db';
 import DeferredProfileInfo from '../components/DeferredProfileInfo';
 import DiskUsageAlert from '../components/DiskUsageAlert';
+import { ToastContainer } from 'react-toastify';
 
 const clientId = process.env.REACT_APP_CLIENT_ID || '';
 const redirectUrl = `${process.env.REACT_APP_HOST_URI}/callback`;
@@ -202,6 +205,7 @@ export const loader: LoaderFunction = async ({ request }) => {
 function HomePage() {
   return (
     <Col className="d-grid gap-2">
+      <ToastContainer />
       <Row className="align-items-center">
         <DeferredProfileInfo />
       </Row>
