@@ -311,51 +311,47 @@ const Playlists = (props: Props) => {
       // play from the position first, to force the device to load the playlist
       // (if we play with the specific song uri and it isn't loaded,
       // it will simply fail and the device won't load the playlist)
-      if (!keepTrying) return;
+      keepTrying &&
+        playViaPositionOffset().then(() =>
+          keepTrying
+            ? waitThenCheckPlaybackState().then((playbackState) => {
+                const { item } = playbackState;
+                if (item?.uri !== songUri) {
+                  if (!keepTrying) return;
 
-      playViaPositionOffset().then(() => {
-        if (!keepTrying) return;
-
-        return waitThenCheckPlaybackState().then((playbackState) => {
-          const { item } = playbackState;
-          if (item?.uri !== songUri) {
-            if (!keepTrying) return;
-
-            toast(
-              <ToastWithQuitButton content="Currently playing song doesn't match, trying again after waiting for playlist to refresh on device..." />,
-              { autoClose: TOAST_AUTO_CLOSE }
-            );
-            // wait 2 seconds to let the device refresh the playlist
-            setTimeout(() => {
-              if (!keepTrying) return;
-
-              toast(<ToastWithQuitButton content="Playing song..." />, {
-                autoClose: TOAST_AUTO_CLOSE,
-              });
-              playViaSongUri().then(() => {
-                if (!keepTrying) return;
-
-                // if songUri still isn't present on device, then spotify stops
-                // playing, but still returns 204, so again we have to check the
-                // playback state, and play via position offset if needed
-                waitThenCheckPlaybackState().then((playbackState) => {
-                  if (!playbackState?.is_playing) {
+                  toast(
+                    <ToastWithQuitButton content="Currently playing song doesn't match, trying again after waiting for playlist to refresh on device..." />,
+                    { autoClose: TOAST_AUTO_CLOSE }
+                  );
+                  // wait 2 seconds to let the device refresh the playlist
+                  setTimeout(() => {
                     if (!keepTrying) return;
 
-                    toast(
-                      `Song still doesn't match, done trying, starting playlist from track ${
-                        offsetPosition + 1
-                      } instead...`,
-                      { autoClose: TOAST_AUTO_CLOSE }
-                    );
-                    playViaPositionOffset();
-                  }
-                });
-              });
-            }, 2000);
-          }
-        });
-      });
+                    toast(<ToastWithQuitButton content="Playing song..." />, {
+                      autoClose: TOAST_AUTO_CLOSE,
+                    });
+                    playViaSongUri().then(() => {
+                      // if songUri still isn't present on device, then spotify stops
+                      // playing, but still returns 204, so again we have to check the
+                      // playback state, and play via position offset if needed
+                      keepTrying &&
+                        waitThenCheckPlaybackState().then((playbackState) => {
+                          if (!playbackState?.is_playing && keepTrying) {
+                            toast(
+                              `Song still doesn't match, done trying, starting playlist from track ${
+                                offsetPosition + 1
+                              } instead...`,
+                              { autoClose: TOAST_AUTO_CLOSE }
+                            );
+                            playViaPositionOffset();
+                          }
+                        });
+                    });
+                  }, 2000);
+                }
+              })
+            : undefined
+        );
     },
     [sdk, selectedDeviceId]
   );
