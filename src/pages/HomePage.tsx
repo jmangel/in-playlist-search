@@ -215,7 +215,7 @@ export const loader: LoaderFunction = async ({ request }) => {
 };
 
 function HomePage() {
-  const { sdk, profile } = useLoaderData() as LoaderResponse;
+  const { profile } = useLoaderData() as LoaderResponse;
 
   const [selectedDeviceId, setSelectedDeviceId] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -235,22 +235,10 @@ function HomePage() {
             )}
           </Await>
         </Suspense>
-        <Suspense fallback={<div>Connecting to spotify...</div>}>
-          <Await
-            resolve={sdk}
-            errorElement={<div>Error connecting to spotify</div>}
-          >
-            {(sdk) => (
-              <Col className="flex-grow-1" xs={6} md={4}>
-                <DevicesInput
-                  selectedDeviceId={selectedDeviceId}
-                  setSelectedDeviceId={setSelectedDeviceId}
-                  sdk={sdk}
-                />
-              </Col>
-            )}
-          </Await>
-        </Suspense>
+        <DeferredDeviceInput
+          selectedDeviceId={selectedDeviceId}
+          setSelectedDeviceId={setSelectedDeviceId}
+        />
       </Row>
       <PlaylistsHeader
         searchQuery={searchQuery}
@@ -286,9 +274,35 @@ const ProfileInfo = (props: { profile: UserProfile }) => {
   );
 };
 
-type DevicesInputProps = {
+type DeferredDeviceInputProps = {
   selectedDeviceId: string;
   setSelectedDeviceId: Dispatch<SetStateAction<string>>;
+};
+const DeferredDeviceInput = (props: DeferredDeviceInputProps) => {
+  const { selectedDeviceId, setSelectedDeviceId } = props;
+  const { sdk } = useLoaderData() as LoaderResponse;
+
+  return (
+    <Suspense fallback={<div>Connecting to spotify...</div>}>
+      <Await
+        resolve={sdk}
+        errorElement={<div>Error connecting to spotify</div>}
+      >
+        {(sdk) => (
+          <Col className="flex-grow-1" xs={6} md={4}>
+            <DevicesInput
+              selectedDeviceId={selectedDeviceId}
+              setSelectedDeviceId={setSelectedDeviceId}
+              sdk={sdk}
+            />
+          </Col>
+        )}
+      </Await>
+    </Suspense>
+  );
+};
+
+type DevicesInputProps = DeferredDeviceInputProps & {
   sdk: SpotifyApi;
 };
 const DevicesInput = (props: DevicesInputProps) => {
