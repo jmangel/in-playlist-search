@@ -1,17 +1,9 @@
-import {
-  Dispatch,
-  SetStateAction,
-  Suspense,
-  useCallback,
-  useEffect,
-  useState,
-} from 'react';
+import { Dispatch, SetStateAction, Suspense, useState } from 'react';
 import { Await, LoaderFunction, defer, useLoaderData } from 'react-router-dom';
 
-import { Alert, Button, Col, Form, Row } from 'react-bootstrap';
+import { Alert, Col, Form, Row } from 'react-bootstrap';
 import {
   AuthorizationCodeWithPKCEStrategy,
-  Device,
   Page,
   SimplifiedPlaylist,
   SpotifyApi,
@@ -20,6 +12,7 @@ import {
 
 import DeferredPlaylists from '../components/DeferredPlaylists';
 import { Artist, Playlist, playlistDatabase, Track as DBTrack } from '../db';
+import DeferredDeviceInput from '../components/DefferedDeviceInput';
 
 const clientId = process.env.REACT_APP_CLIENT_ID || '';
 const redirectUrl = `${process.env.REACT_APP_HOST_URI}/callback`;
@@ -276,86 +269,6 @@ const ProfileInfo = (props: { profile: UserProfile }) => {
     </h1>
   ) : (
     <></>
-  );
-};
-
-type DeferredDeviceInputProps = {
-  selectedDeviceId: string;
-  setSelectedDeviceId: Dispatch<SetStateAction<string>>;
-};
-const DeferredDeviceInput = (props: DeferredDeviceInputProps) => {
-  const { selectedDeviceId, setSelectedDeviceId } = props;
-  const { sdk } = useLoaderData() as LoaderResponse;
-
-  return (
-    <Suspense fallback={<div>Connecting to spotify...</div>}>
-      <Await
-        resolve={sdk}
-        errorElement={<div>Error connecting to spotify</div>}
-      >
-        {(sdk) => (
-          <Col className="flex-grow-1" xs={6} md={4}>
-            <DevicesInput
-              selectedDeviceId={selectedDeviceId}
-              setSelectedDeviceId={setSelectedDeviceId}
-              sdk={sdk}
-            />
-          </Col>
-        )}
-      </Await>
-    </Suspense>
-  );
-};
-
-type DevicesInputProps = DeferredDeviceInputProps & {
-  sdk: SpotifyApi;
-};
-const DevicesInput = (props: DevicesInputProps) => {
-  const { selectedDeviceId, setSelectedDeviceId, sdk } = props;
-
-  const [devices, setDevices] = useState([] as Device[]);
-
-  const loadDevices = useCallback(() => {
-    sdk?.player
-      ?.getAvailableDevices?.()
-      ?.then(({ devices }) => setDevices(devices));
-  }, [sdk]);
-
-  useEffect(loadDevices, [loadDevices]);
-
-  useEffect(
-    () =>
-      setSelectedDeviceId(
-        (selectedDeviceId) =>
-          devices?.find(({ is_active }) => is_active)?.id ||
-          selectedDeviceId ||
-          ''
-      ),
-    [devices, setSelectedDeviceId]
-  );
-
-  return (
-    <div className="d-flex align-items-center">
-      <Form.Label className="flex-shrink-0 pr-1 mb-0">Playing on</Form.Label>
-      <Form.Select
-        className="flex-grow-1 mx-2"
-        name="select"
-        value={selectedDeviceId}
-        onChange={(e) => setSelectedDeviceId(e.target.value)}
-      >
-        <option value=""></option>
-        {devices
-          ?.filter(({ id }) => !!id)
-          .map(({ name, id }) => (
-            <option key={`device-${id}`} value={id!}>
-              {name}
-            </option>
-          ))}
-      </Form.Select>
-      <Button onClick={loadDevices} className="flex-shrink-0">
-        Refresh devices
-      </Button>
-    </div>
   );
 };
 
