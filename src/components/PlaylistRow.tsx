@@ -125,11 +125,15 @@ const PlaylistRow = (props: Props) => {
                     : () => playPlaylistTrack(playlist.uri, track.uri, index)
                 }
               />
-              <td colSpan={1}>{track.name}</td>
-              <td colSpan={2}>
+              <td colSpan={1} className="text-break">
+                {track.name}
+              </td>
+              <td colSpan={2} className="text-break">
                 {track.artists.map((artist) => artist.name).join(', ')}
               </td>
-              <td colSpan={1}>{track.albumName}</td>
+              <td colSpan={1} className="text-break">
+                {track.albumName}
+              </td>
             </tr>
           );
 
@@ -166,18 +170,19 @@ const PlaylistRow = (props: Props) => {
             </Dropdown>
           }
         />
-        <td>
+        <td className="text-break">
           <a target="_blank" href={spotifyUrl} rel="noreferrer">
             <strong>{name}</strong>
           </a>
         </td>
         <td
-          className={isOwner ? 'fw-bold' : ''}
+          className={`text-break ${isOwner ? ' fw-bold' : ''}`}
           style={owner.id === 'spotify' ? { color: SPOTIFY_GREEN } : {}}
         >
           {isOwner ? 'me' : owner.display_name}
         </td>
         <td
+          className="text-break"
           dangerouslySetInnerHTML={{
             __html: DOMPurify.sanitize(description, {
               USE_PROFILES: { html: true },

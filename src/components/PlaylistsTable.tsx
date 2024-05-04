@@ -28,7 +28,7 @@ const PlaylistsTable = (props: Props) => {
           <th>Tracks</th>
         </tr>
       </thead>
-      <tbody className="text-break">
+      <tbody>
         {Object.values(playlistsDetails)?.map((playlist, index) => (
           <PlaylistRow
             key={playlist.id}
