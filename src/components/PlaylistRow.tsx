@@ -31,7 +31,6 @@ type IndexTableRowWithLinkButtonProps = {
   index: number;
   iconName: string;
   onClick?: MouseEventHandler<HTMLButtonElement>;
-  disabled?: boolean;
   className?: string;
   actions?: JSX.Element;
 };
@@ -39,7 +38,6 @@ const IndexTableRowWithLinkButton = ({
   index,
   iconName,
   onClick,
-  disabled,
   className = '',
   actions,
 }: IndexTableRowWithLinkButtonProps) => (
