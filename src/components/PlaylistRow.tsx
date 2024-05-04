@@ -109,11 +109,11 @@ const PlaylistRow = (props: Props) => {
           return (
             <tr
               key={track.id || track.uri}
-              className={
+              className={`table-light ${
                 !isMatching || track.missingFromSpotify
                   ? 'small fst-italic fw-lighter'
                   : ''
-              }
+              }`}
             >
               <IndexTableRowWithLinkButton
                 index={index}
@@ -208,7 +208,7 @@ const PlaylistRow = (props: Props) => {
               </div>
             </th>
           </tr>
-          <tr>
+          <tr className="table-light">
             <th>#</th>
             <th colSpan={1}>Track</th>
             <th colSpan={2}>Artist</th>

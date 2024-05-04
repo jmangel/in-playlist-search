@@ -18,7 +18,7 @@ const PlaylistsTable = (props: Props) => {
   const { playlistsDetails, searchQuery, playPlaylistTrack, copySnapshot } =
     props;
   return (
-    <Table striped bordered hover responsive>
+    <Table striped bordered hover responsive className="table-sm">
       <thead>
         <tr>
           <th>#</th>
