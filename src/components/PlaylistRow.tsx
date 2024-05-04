@@ -111,7 +111,7 @@ const PlaylistRow = (props: Props) => {
               key={track.id || track.uri}
               className={`table-secondary ${
                 !isMatching || track.missingFromSpotify
-                  ? 'small fst-italic fw-lighter'
+                  ? 'small fst-italic fw-light'
                   : ''
               }`}
             >
