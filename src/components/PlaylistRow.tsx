@@ -44,7 +44,7 @@ const IndexTableRowWithLinkButton = ({
   actions,
 }: IndexTableRowWithLinkButtonProps) => (
   <td>
-    <div className="d-flex justify-content-end">
+    <div className="d-flex justify-content-end gap-1">
       {index + 1}
       {onClick && (
         <Button
@@ -199,7 +199,7 @@ const PlaylistRow = (props: Props) => {
         <>
           <tr>
             <th colSpan={6} className="border-0 border-bottom border-success">
-              <div className="d-flex">
+              <div className="d-flex gap-2">
                 Tracks{' '}
                 <Form.Check
                   type="switch"
@@ -209,7 +209,6 @@ const PlaylistRow = (props: Props) => {
                   onChange={(e) =>
                     setIncludeNonMatchingTracks(e.target.checked)
                   }
-                  className="ms-2"
                 />
               </div>
             </th>

@@ -133,10 +133,10 @@ const DeviceInput = (props: DeviceInputProps) => {
   );
 
   return (
-    <div className="d-flex align-items-center">
-      <Form.Label className="flex-shrink-0 pr-1 mb-0">Playing on</Form.Label>
+    <div className="d-flex align-items-center gap-2">
+      <Form.Label className="flex-shrink-0 mb-0">Playing on</Form.Label>
       <Form.Select
-        className="flex-grow-1 mx-2"
+        className="flex-grow-1"
         name="select"
         value={selectedDeviceId}
         disabled={!setSelectedDeviceId}
