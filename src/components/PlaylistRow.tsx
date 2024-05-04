@@ -47,14 +47,11 @@ const IndexTableRowWithLinkButton = ({
     <div className="d-flex justify-content-end gap-1">
       {index + 1}
       {onClick && (
-        <Button
-          variant="link"
+        <i
+          role="button"
+          className={`bi bi-${iconName} ${className}`}
           onClick={onClick}
-          disabled={disabled}
-          className="lh-sm p-0 ps-1"
-        >
-          <i className={`bi bi-${iconName} ${className}`} />
-        </Button>
+        />
       )}
     </div>
     {actions && <div className="d-flex justify-content-end">{actions}</div>}
