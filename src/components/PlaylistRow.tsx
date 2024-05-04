@@ -105,16 +105,19 @@ const PlaylistRow = (props: Props) => {
           isMatching ||
           queuePreviewIndex >= index ||
           includeNonMatchingTracks
-        )
+        ) {
+          const shouldDiminishVisually =
+            !isMatching || track.missingFromSpotify;
+
+          const rowClass = `table-secondary ${
+            shouldDiminishVisually ? 'small fst-italic fw-light' : ''
+          }`;
+          const cellClass = `text-break ${
+            shouldDiminishVisually ? 'small' : ''
+          }`;
+
           return (
-            <tr
-              key={track.id || track.uri}
-              className={`table-secondary ${
-                !isMatching || track.missingFromSpotify
-                  ? 'small fst-italic fw-light'
-                  : ''
-              }`}
-            >
+            <tr key={track.id || track.uri} className={rowClass}>
               <IndexTableRowWithLinkButton
                 index={index}
                 iconName="play-circle-fill"
@@ -125,17 +128,18 @@ const PlaylistRow = (props: Props) => {
                     : () => playPlaylistTrack(playlist.uri, track.uri, index)
                 }
               />
-              <td colSpan={1} className="text-break">
+              <td colSpan={1} className={cellClass}>
                 {track.name}
               </td>
-              <td colSpan={2} className="text-break">
+              <td colSpan={2} className={cellClass}>
                 {track.artists.map((artist) => artist.name).join(', ')}
               </td>
-              <td colSpan={1} className="text-break">
+              <td colSpan={1} className={cellClass}>
                 {track.albumName}
               </td>
             </tr>
           );
+        }
 
         return <></>;
       })
