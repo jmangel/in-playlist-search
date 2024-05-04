@@ -204,7 +204,7 @@ export const loader: LoaderFunction = async ({ request }) => {
 
 function HomePage() {
   return (
-    <Container fluid className="d-grid gap-2">
+    <Container fluid className="d-grid gap-2 gx-3">
       <ToastContainer />
       <Row className="align-items-center">
         <DeferredProfileInfo />
