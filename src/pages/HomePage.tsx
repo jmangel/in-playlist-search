@@ -1,6 +1,6 @@
 import { LoaderFunction, defer } from 'react-router-dom';
 
-import { Col, Row } from 'react-bootstrap';
+import { Col, Container, Row } from 'react-bootstrap';
 import {
   AuthorizationCodeWithPKCEStrategy,
   Page,
@@ -204,14 +204,14 @@ export const loader: LoaderFunction = async ({ request }) => {
 
 function HomePage() {
   return (
-    <Col className="d-grid gap-2">
+    <Container fluid className="d-grid gap-2">
       <ToastContainer />
       <Row className="align-items-center">
         <DeferredProfileInfo />
       </Row>
       <DeferredPlaylists />
       <DiskUsageAlert />
-    </Col>
+    </Container>
   );
 }
 
