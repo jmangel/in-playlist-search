@@ -297,12 +297,19 @@ const Playlists = (props: Props) => {
       if (window.navigator.vibrate) window.navigator.vibrate(20);
 
       const playWithOffsetOptions = (offsetOptions: object) =>
-        sdk.player.startResumePlayback(
-          selectedDeviceId,
-          playlistUri,
-          undefined,
-          offsetOptions
-        );
+        sdk.player
+          .startResumePlayback(
+            selectedDeviceId,
+            playlistUri,
+            undefined,
+            offsetOptions
+          )
+          .catch((e) => {
+            if (e.message.includes('NO_ACTIVE_DEVICE'))
+              toast.error('No active device, please select a device', {
+                autoClose: TOAST_AUTO_CLOSE,
+              });
+          });
 
       const playViaPositionOffset = () =>
         playWithOffsetOptions({
