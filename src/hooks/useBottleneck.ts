@@ -5,6 +5,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Bottleneck from 'bottleneck';
 import { SPOTIFY_RATE_LIMIT_WINDOW_SECONDS } from '../components/DeferredPlaylists';
+import { toast } from 'react-toastify';
 
 console.warn('searchme useBottleneck top-level, CREATING REQUEST QUEUE');
 
@@ -63,6 +64,7 @@ const useBottleneck = (options: Bottleneck.ConstructorOptions) => {
       if (error.message.includes('rate limit')) {
         return SPOTIFY_RATE_LIMIT_WINDOW_SECONDS * 1000;
       }
+      toast.error(`An unknown error occurred: ${error.message}`);
     });
 
     // Clean up: remove the event listener when the component using this hook unmounts
