@@ -62,8 +62,16 @@ const useBottleneck = (options: Bottleneck.ConstructorOptions) => {
       );
 
       if (error.message.includes('rate limit')) {
-        return SPOTIFY_RATE_LIMIT_WINDOW_SECONDS * 1000;
+        const milliseconds = SPOTIFY_RATE_LIMIT_WINDOW_SECONDS * 1000;
+
+        toast.warning('Spotify rate limit exceeded, waiting...', {
+          toastId: 'rate-limit-toast',
+          autoClose: milliseconds,
+        });
+
+        return milliseconds;
       }
+
       toast.error(`An unknown error occurred: ${error.message}`);
     });
 
