@@ -16,15 +16,21 @@ const MODIFIED_URI_REGEX = new RegExp(
 
 const QUEUE_PREVIEW_LENGTH = 5;
 
+const doesMatchByWord = (searchQuery: string, matchableStrings: string[]) => {
+  const matchableString = matchableStrings.join(' ').toLowerCase();
+
+  const queryWords = searchQuery.toLowerCase().split(' ');
+  return queryWords.every((word) => matchableString.includes(word));
+};
+
 const trackMatches = (searchQuery: string, track: Track) => {
   if (!track) return false;
 
-  const searchWords = searchQuery.split(' ');
-  const matchableString = `${track.name} ${track.artists
-    .map(({ name }) => name)
-    .join(' ')} ${track.albumName}`.toLowerCase();
-
-  return searchWords.every((word) => matchableString.includes(word));
+  return doesMatchByWord(searchQuery, [
+    track.name,
+    ...track.artists.map(({ name }) => name),
+    track.albumName,
+  ]);
 };
 
 type IndexTableRowWithLinkButtonProps = {
@@ -85,9 +91,7 @@ const PlaylistRow = (props: Props) => {
   const matchesSearchTerm = useMemo(() => {
     if (!searchQuery) return true;
     return (
-      name.toLowerCase().includes(searchQuery) ||
-      owner.display_name.toLowerCase().includes(searchQuery) ||
-      description.toLowerCase().includes(searchQuery) ||
+      doesMatchByWord(searchQuery, [name, owner.display_name, description]) ||
       tracks.some((track) => trackMatches(searchQuery, track))
     );
   }, [searchQuery, name, owner.display_name, description, tracks]);
