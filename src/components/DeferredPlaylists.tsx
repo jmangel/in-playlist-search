@@ -335,8 +335,13 @@ const Playlists = (props: Props) => {
         playViaPositionOffset().then(() =>
           keepTrying
             ? waitThenCheckPlaybackState().then((playbackState) => {
-                const { item } = playbackState;
-                if (item?.uri !== songUri) {
+                if (!playbackState) {
+                  toast.error('Playback failed, try again', {
+                    autoClose: TOAST_AUTO_CLOSE,
+                  });
+                  return;
+                }
+                if (playbackState.item?.uri !== songUri) {
                   if (!keepTrying) return;
 
                   toast.warning(
