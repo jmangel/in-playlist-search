@@ -212,7 +212,7 @@ const SectionHeader = (props: {
         <Col>
           <Form.Control
             type="text"
-            placeholder="Search by song, artist, album, or playlist name or description"
+            placeholder="Search by song, artist, album, or playlist name, description, or owner"
             defaultValue={searchQuery}
             disabled={!setSearchQuery}
             onChange={onChange}
