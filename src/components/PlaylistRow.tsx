@@ -1,12 +1,13 @@
 import { LoaderResponse as HomePageLoaderResponse } from '../pages/HomePage';
 import { useLoaderData } from 'react-router-dom';
 import { MouseEventHandler, useMemo, useState } from 'react';
-import { Button, Dropdown, Form } from 'react-bootstrap';
+import { Dropdown, Form } from 'react-bootstrap';
 import * as DOMPurify from 'dompurify';
 import { SPOTIFY_GREEN } from './DeferredPlaylists';
 import { Snapshot, Track } from '../pages/HomePage';
 
 const DEFAULT_DOMPURIFY_URI_REGEX =
+  // eslint-disable-next-line no-useless-escape
   /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|sms|cid|xmpp):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i;
 
 const MODIFIED_URI_REGEX = new RegExp(
