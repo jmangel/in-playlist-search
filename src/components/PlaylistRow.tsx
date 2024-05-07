@@ -76,8 +76,7 @@ type Props = {
 const PlaylistRow = (props: Props) => {
   const { playlist, index, searchQuery, playPlaylistTrack, copySnapshot } =
     props;
-  const { id, name, description, tracks, owner, totalTracks, spotifyUrl } =
-    playlist;
+  const { id, name, description, tracks, owner, spotifyUrl } = playlist;
 
   const { profile } = useLoaderData() as HomePageLoaderResponse;
 
@@ -86,7 +85,6 @@ const PlaylistRow = (props: Props) => {
     useState(false);
 
   const isOwner = owner.id === profile?.id;
-  const hasMissingOrExtraTracks = tracks.length !== totalTracks;
 
   const matchesSearchTerm = useMemo(() => {
     if (!searchQuery) return true;
@@ -135,7 +133,7 @@ const PlaylistRow = (props: Props) => {
               <td colSpan={1} className={cellClass}>
                 {track.name}
               </td>
-              <td colSpan={2} className={cellClass}>
+              <td colSpan={1} className={cellClass}>
                 {track.artists.map((artist) => artist.name).join(', ')}
               </td>
               <td colSpan={1} className={cellClass}>
@@ -198,10 +196,6 @@ const PlaylistRow = (props: Props) => {
             }),
           }}
         ></td>
-        <td className={hasMissingOrExtraTracks ? 'bg-danger' : ''}>
-          {tracks.length}
-          {hasMissingOrExtraTracks ? ` / ${totalTracks}` : ''}
-        </td>
       </tr>
       {trackRows.length > 0 && (
         <>
@@ -224,7 +218,7 @@ const PlaylistRow = (props: Props) => {
           <tr className="table-secondary">
             <th>#</th>
             <th colSpan={1}>Track</th>
-            <th colSpan={2}>Artist</th>
+            <th colSpan={1}>Artist</th>
             <th colSpan={1}>Album</th>
           </tr>
 

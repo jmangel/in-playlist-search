@@ -25,7 +25,6 @@ const PlaylistsTable = (props: Props) => {
           <th>Name</th>
           <th>Owner</th>
           <th>Description</th>
-          <th>Tracks</th>
         </tr>
       </thead>
       <tbody>
