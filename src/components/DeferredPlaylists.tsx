@@ -536,13 +536,13 @@ const Playlists = (props: Props) => {
 
                 const { limit, total, items } = playlist.tracks;
 
-                playlistDatabase.playlists.put({
+                playlistDatabase.playlists.add({
                   id,
                   owner: playlist.owner,
                   uri,
                   spotifyUrl: external_urls.spotify,
                 });
-                playlistDatabase.playlistSnapshots.put({
+                playlistDatabase.playlistSnapshots.add({
                   playlistId: id,
                   id: snapshot_id,
                   name: playlist.name,
