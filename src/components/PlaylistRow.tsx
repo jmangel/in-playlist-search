@@ -53,7 +53,7 @@ const IndexTableRowWithLinkButton = ({
       {onClick && (
         <i
           role="button"
-          className={`link-primary bi bi-${iconName} ${className}`}
+          className={`text-primary bi bi-${iconName} ${className}`}
           onClick={onClick}
         />
       )}
