@@ -1,6 +1,8 @@
 {
   "short_name": "In-Playlist Search",
   "name": "In-Playlist Search for Spotify",
+  "description": "Search through your saved playlists on Spotify",
+  "id": "com.johnmangel.in-playlist-search",
   "icons": [
     {
       "src": "favicon.ico",
