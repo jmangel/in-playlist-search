@@ -114,9 +114,10 @@ const DeviceInput = (props: DeviceInputProps) => {
   const [devices, setDevices] = useState([] as Device[]);
 
   const loadDevices = useCallback(() => {
-    sdk?.player
-      ?.getAvailableDevices?.()
-      ?.then(({ devices }) => setDevices(devices));
+    checkOnline() &&
+      sdk?.player
+        ?.getAvailableDevices?.()
+        ?.then(({ devices }) => setDevices(devices));
   }, [sdk]);
 
   useEffect(loadDevices, [loadDevices]);
@@ -230,6 +231,17 @@ const SectionHeader = (props: {
   );
 };
 
+const checkOnline = () => {
+  if (navigator.onLine) return true;
+
+  toast.error('No internet connection', {
+    autoClose: TOAST_AUTO_CLOSE,
+    toastId: 'no-internet',
+  });
+
+  return false;
+};
+
 type Props = {
   rememberedSnapshots: RememberedSnapshots;
   firstPlaylistPage: Page<SimplifiedPlaylist>;
@@ -261,6 +273,8 @@ const Playlists = (props: Props) => {
 
   const playPlaylistTrack = useCallback(
     (playlistUri: string, songUri: string, offsetPosition: number) => {
+      if (!checkOnline()) return;
+
       let keepTrying = true;
 
       const CloseOrQuitButton = ({
@@ -297,19 +311,21 @@ const Playlists = (props: Props) => {
       if (window.navigator.vibrate) window.navigator.vibrate(20);
 
       const playWithOffsetOptions = (offsetOptions: object) =>
-        sdk.player
-          .startResumePlayback(
-            selectedDeviceId,
-            playlistUri,
-            undefined,
-            offsetOptions
-          )
-          .catch((e) => {
-            if (e.message.includes('NO_ACTIVE_DEVICE'))
-              toast.error('No active device, please select a device', {
-                autoClose: TOAST_AUTO_CLOSE,
-              });
-          });
+        checkOnline()
+          ? sdk.player
+              .startResumePlayback(
+                selectedDeviceId,
+                playlistUri,
+                undefined,
+                offsetOptions
+              )
+              .catch((e) => {
+                if (e.message.includes('NO_ACTIVE_DEVICE'))
+                  toast.error('No active device, please select a device', {
+                    autoClose: TOAST_AUTO_CLOSE,
+                  });
+              })
+          : Promise.reject();
 
       const playViaPositionOffset = () =>
         playWithOffsetOptions({
@@ -323,7 +339,10 @@ const Playlists = (props: Props) => {
 
       const waitThenCheckPlaybackState = () =>
         new Promise<PlaybackState>((resolve) => {
-          setTimeout(() => sdk.player.getPlaybackState().then(resolve), 1000);
+          setTimeout(
+            () => checkOnline() && sdk.player.getPlaybackState().then(resolve),
+            1000
+          );
         });
 
       // TODO: handle 404 device not found
