@@ -3,6 +3,7 @@
 Search all your saved Spotify playlists for the ones that match the mood, by searching for the song in your head.
 
 [It's live](https://in-playlist-search.onrender.com/ 'In-Playlist Search').
+(If your spotify account is denied access, email me with your spotify email address so I can add you to the list of beta users.)
 
 ## Features
 
